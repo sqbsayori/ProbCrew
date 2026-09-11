@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://our-system/contracts/events.schema.json",
+  "title": "Agent 运行时事件协议",
+  "description": "后端 Agent 运行时 → 前端的唯一契约。SSE 以 `data: <本对象 JSON>` 单行传输。前端必须忽略未知 type（保证向后兼容）。字段随 type 取用，未用到的字段不应出现在报文中（后端已 exclude_none）。",
+  "type": "object",
+  "required": ["type", "ts"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "run.start",
+        "context.received",
+        "plan",
+        "agent.start",
+        "agent.delta",
+        "agent.end",
+        "tool.call",
+        "tool.result",
+        "artifact",
+        "hitl.request",
+        "hitl.resolved",
+        "run.end",
+        "error"
+      ]
+    },
+    "ts": { "type": "number", "description": "epoch 秒" },
+    "run_id": { "type": ["string", "null"] },
+    "agent": { "type": ["string", "null"], "description": "Agent id，见 /api/agents" },
+    "label": { "type": ["string", "null"], "description": "Agent 中文名" },
+    "session_id": { "type": ["string", "null"] },
+    "query": { "type": ["string", "null"] },
+    "intent": {
+      "type": ["string", "null"],
+      "enum": ["knowledge", "solve", "visualize", "analytics", "animation", "multi", null]
+    },
+    "step": { "type": ["integer", "null"] },
+    "steps": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "object",
+        "properties": {
+          "agent": { "type": "string" },
+          "label": { "type": "string" }
+        }
+      },
+      "description": "plan 事件：本次要唤醒的 Agent 列表"
+    },
+    "reason": { "type": ["string", "null"], "description": "plan 事件：路由理由" },
+    "ok": { "type": ["boolean", "null"] },
+    "duration_ms": { "type": ["integer", "null"] },
+    "summary": { "type": ["string", "null"] },
+    "text": { "type": ["string", "null"], "description": "agent.delta 的增量文本" },
+    "tool": { "type": ["string", "null"] },
+    "args": { "type": ["object", "null"] },
+    "data": { "type": ["object", "null"] },
+    "kind": {
+      "type": ["string", "null"],
+      "enum": ["animation", "chart", "formula", "steps", "text", "table", null]
+    },
+    "payload": { "type": ["object", "null"], "description": "artifact 内容，结构随 kind 而定" },
+    "hitl_id": { "type": ["string", "null"] },
+    "draft": { "type": ["string", "null"], "description": "hitl.request：待确认草稿" },
+    "options": {
+      "type": ["array", "null"],
+      "items": { "type": "string", "enum": ["confirm", "correct", "supplement"] }
+    },
+    "action": {
+      "type": ["string", "null"],
+      "enum": ["confirm", "correct", "supplement", null]
+    },
+    "final": { "type": ["string", "null"] },
+    "status": { "type": ["string", "null"] },
+    "message": { "type": ["string", "null"] },
+    "final_answer": {
+      "type": ["string", "null"],
+      "description": "run.end 携带：聚合后的最终答案（Markdown + LaTeX）"
+    }
+  },
+  "additionalProperties": false,
+
+  "definitions": {
+    "artifactPayload": {
+      "description": "artifact 的 payload 结构。新增 kind 属于向后兼容扩展。",
+      "oneOf": [
+        {
+          "title": "animation",
+          "type": "object",
+          "required": ["id", "title", "url"],
+          "properties": {
+            "id": { "type": "string" },
+            "title": { "type": "string" },
+            "url": { "type": "string" },
+            "category": { "type": "string" },
+            "description": { "type": "string" },
+            "reason": { "type": "string" },
+            "controls": { "type": "object" }
+          }
+        },
+        {
+          "title": "formula",
+          "type": "object",
+          "required": ["items"],
+          "properties": {
+            "title": { "type": "string" },
+            "items": { "type": "array", "items": { "type": "string" }, "description": "LaTeX 源串数组" }
+          }
+        },
+        {
+          "title": "steps",
+          "type": "object",
+          "required": ["steps"],
+          "properties": {
+            "title": { "type": "string" },
+            "count": { "type": "integer" },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["index", "title", "body"],
+                "properties": {
+                  "index": { "type": "integer" },
+                  "title": { "type": "string" },
+                  "body": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "title": "chart",
+          "type": "object",
+          "required": ["pdf", "cdf"],
+          "properties": {
+            "title": { "type": "string" },
+            "dist": { "type": "string" },
+            "name": { "type": "string" },
+            "kind": { "type": "string", "enum": ["discrete", "continuous"] },
+            "params": { "type": "object" },
+            "mean": { "type": "number" },
+            "var": { "type": "number" },
+            "std": { "type": "number" },
+            "note": { "type": "string" },
+            "pdf": { "$ref": "#/definitions/series" },
+            "cdf": { "$ref": "#/definitions/series" }
+          }
+        },
+        {
+          "title": "table",
+          "type": "object",
+          "required": ["columns", "rows"],
+          "properties": {
+            "title": { "type": "string" },
+            "columns": { "type": "array", "items": { "type": "string" } },
+            "rows": { "type": "array", "items": { "type": "array" } }
+          }
+        },
+        {
+          "title": "text",
+          "type": "object",
+          "required": ["content"],
+          "properties": { "content": { "type": "string" } }
+        }
+      ]
+    },
+    "series": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "array", "items": { "type": "number" } },
+        "y": { "type": "array", "items": { "type": "number" } }
+      }
+    }
+  }
+}

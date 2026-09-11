@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  演示页：概率论与数理统计 · 在线课程课件页
+  章节：第 1 章 随机事件与概率 › 1.4 全概率公式与贝叶斯公式
+  用途：给团队看「伴学助手悬浮球 / 虚拟页宠」挂在真实课程页面上的效果。
+  ============================================================================
+
+  【例题数值验算过程】
+  题目：某工厂甲、乙、丙三条生产线，产量占比 25% / 35% / 40%，
+        次品率分别为 5% / 4% / 2%，任取一件产品。
+  设 A1 = 来自甲线，A2 = 来自乙线，A3 = 来自丙线，D = 抽到的是次品。
+
+  已知（先验 / 似然）：
+      P(A1) = 0.25   P(A2) = 0.35   P(A3) = 0.40      （且 0.25+0.35+0.40 = 1）
+      P(D|A1) = 0.05  P(D|A2) = 0.04  P(D|A3) = 0.02
+
+  第一步：联合概率（各生产线贡献的次品占比）
+      P(A1)P(D|A1) = 0.25 × 0.05 = 0.0125
+      P(A2)P(D|A2) = 0.35 × 0.04 = 0.0140
+      P(A3)P(D|A3) = 0.40 × 0.02 = 0.0080
+
+  第二步：全概率公式求 P(D)（三个数值之一）
+      P(D) = 0.0125 + 0.0140 + 0.0080
+           = 0.0345
+      即任取一件是次品的概率 P(D) = 0.0345 = 3.45%
+      （验算：(0.25×0.05)+(0.35×0.04)+(0.40×0.02) = 0.0125+0.014+0.008 = 0.0345，程序核对一致）
+
+  第三步：贝叶斯公式求后验概率（分子分母同乘 10000 化为整数后约分）
+      P(A1|D) = 0.0125 / 0.0345 = 125/345 = 25/69 = 0.362318840...  ≈ 36.23%
+      P(A2|D) = 0.0140 / 0.0345 = 140/345 = 28/69 = 0.405797101...  ≈ 40.58%
+      P(A3|D) = 0.0080 / 0.0345 =  80/345 = 16/69 = 0.231884058...  ≈ 23.19%
+
+  第四步：自洽性校验
+      25/69 + 28/69 + 16/69 = 69/69 = 1        （后验概率之和必须为 1）
+      结论：乙线次品率（4%）不是最高，但它产量占比最大（35%），
+            因此「次品来源」的后验概率反而最大（40.58% > 36.23% > 23.19%）。
+
+  【离线约束】全部资源均为根相对路径（/styles、/course、/animations、/widget），
+              无任何 CDN、外链字体或外链图片，可完全离线运行。
+              页面内不渲染 LaTeX（不引 KaTeX），公式以 $...$ / $$...$$ 纯文本保留。
+  ============================================================================
+-->
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>1.4 全概率公式与贝叶斯公式 · 概率论与数理统计 · 在线课程</title>
+  <meta name="description" content="概率论与数理统计 第 1 章第 4 节课件：完备事件组、全概率公式、贝叶斯公式、次品来源例题、易错点与小结。" />
+
+  <!-- 共享设计令牌（团队统一主题） -->
+  <link rel="stylesheet" href="/styles/tokens.css" />
+  <!-- 本页样式（全部选择器以 .course- 为前缀，避免影响同页挂载的助手组件） -->
+  <link rel="stylesheet" href="/course/lesson.css" />
+</head>
+<body class="course-body">
+<div class="course-shell">
+
+  <!-- ======================= 顶部：深色导航条 + 面包屑 + 学习进度 ======================= -->
+  <header class="course-topbar">
+    <div class="course-topbar-inner">
+      <nav class="course-crumb" aria-label="课程面包屑">
+        <a href="#">我的课程</a>
+        <span class="course-crumb-sep">›</span>
+        <a href="#">概率论与数理统计</a>
+        <span class="course-crumb-sep">›</span>
+        <span class="course-crumb-cur">第 1 章 随机事件与概率</span>
+        <span class="course-crumb-sep">›</span>
+        <span class="course-crumb-cur">1.4 全概率公式与贝叶斯公式</span>
+      </nav>
+      <div class="course-progress">
+        <span>学习进度</span>
+        <span class="course-progress-track" role="img" aria-label="学习进度 62%">
+          <i class="course-progress-fill"></i>
+        </span>
+        <b>62%</b>
+      </div>
+    </div>
+  </header>
+
+  <div class="course-layout">
+
+    <!-- ======================= 左侧：课程目录（装饰性，纯展示） ======================= -->
+    <aside class="course-toc">
+      <div class="course-toc-title">课程目录</div>
+      <nav class="course-toc-nav" aria-label="课程目录">
+        <ol class="course-toc-list">
+          <li>
+            <p class="course-toc-chapter">第 1 章 随机事件与概率</p>
+            <ol class="course-toc-sublist">
+              <li><a class="course-toc-item" href="#">1.1 随机试验与样本空间</a></li>
+              <li><a class="course-toc-item" href="#">1.2 概率的定义与性质</a></li>
+              <li><a class="course-toc-item" href="#">1.3 条件概率与乘法公式</a></li>
+              <li><a class="course-toc-item is-current" href="#" aria-current="true">1.4 全概率公式与贝叶斯公式</a></li>
+              <li><a class="course-toc-item" href="#">1.5 事件的独立性</a></li>
+            </ol>
+          </li>
+          <li>
+            <p class="course-toc-chapter">第 2 章 随机变量及其分布</p>
+            <ol class="course-toc-sublist">
+              <li><a class="course-toc-item" href="#">2.1 随机变量与分布函数</a></li>
+              <li><a class="course-toc-item" href="#">2.2 离散型随机变量及其分布律</a></li>
+              <li><a class="course-toc-item" href="#">2.3 连续型随机变量及其概率密度</a></li>
+              <li><a class="course-toc-item" href="#">2.4 随机变量函数的分布</a></li>
+            </ol>
+          </li>
+          <li>
+            <p class="course-toc-chapter">第 3 章 多维随机变量</p>
+            <ol class="course-toc-sublist">
+              <li><a class="course-toc-item" href="#">3.1 二维随机变量与联合分布</a></li>
+              <li><a class="course-toc-item" href="#">3.2 边缘分布与条件分布</a></li>
+              <li><a class="course-toc-item" href="#">3.3 随机变量的独立性</a></li>
+            </ol>
+          </li>
+          <li>
+            <p class="course-toc-chapter">第 4 章 随机变量的数字特征</p>
+            <ol class="course-toc-sublist">
+              <li><a class="course-toc-item" href="#">4.1 数学期望</a></li>
+              <li><a class="course-toc-item" href="#">4.2 方差与标准差</a></li>
+              <li><a class="course-toc-item" href="#">4.3 协方差与相关系数</a></li>
+            </ol>
+          </li>
+          <li>
+            <p class="course-toc-chapter">第 5 章 大数定律与中心极限定理</p>
+            <ol class="course-toc-sublist">
+              <li><a class="course-toc-item" href="#">5.1 大数定律</a></li>
+              <li><a class="course-toc-item" href="#">5.2 中心极限定理</a></li>
+            </ol>
+          </li>
+        </ol>
+      </nav>
+    </aside>
+
+    <!-- ======================= 正文容器（助手优先抽取的目标） ======================= -->
+    <main class="course-main" id="lesson-content" data-lesson-title="1.4 全概率公式与贝叶斯公式">
+      <article class="course-article">
+
+        <h1 id="lesson-title">1.4 全概率公式与贝叶斯公式</h1>
+        <p class="course-meta">
+          <span>第 1 章 随机事件与概率</span>
+          <span>学时：2 学时</span>
+          <span>难度：中等</span>
+        </p>
+
+        <p class="course-lead">
+          在 1.3 节里，我们讨论了条件概率 <code class="course-math">$P(B\mid A)$</code>：它回答的是“在已知 <code class="course-math">$A$</code> 发生的条件下，<code class="course-math">$B$</code> 发生的可能性有多大”。这一节把这个工具用到一类非常常见的场景上：结果的可能成因有好几种，而我们既想“由因推果”地算出结果发生的总概率，又想反过来“由果溯因”，判断眼前的这个结果最可能来自哪一种成因。前一个问题由全概率公式解决，后一个问题由贝叶斯公式解决。
+        </p>
+
+        <section id="sec-goal">
+          <h2>本节学习目标</h2>
+          <ul>
+            <li>能判断一组事件是否构成完备事件组（即样本空间的一个划分）；</li>
+            <li>掌握全概率公式，会用“分情形加权求和”的思路求解概率问题；</li>
+            <li>理解先验概率、似然、后验概率三者的含义与各自角色；</li>
+            <li>掌握贝叶斯公式，能对次品来源这类问题算出数值正确的后验概率并作出合理解释。</li>
+          </ul>
+        </section>
+
+        <section id="sec-total-probability">
+          <h2>一、全概率公式</h2>
+
+          <h3>1. 完备事件组：公式成立的前提</h3>
+          <p>
+            全概率公式并不是对任意一组事件都成立。它要求我们把样本空间 <code class="course-math">$\Omega$</code> 切成若干块，块与块之间不重叠，合起来又刚好盖满整个 <code class="course-math">$\Omega$</code>。这样的分法有正式的名字。
+          </p>
+          <p>
+            <strong>定义</strong>：设 <code class="course-math">$\Omega$</code> 为样本空间，<code class="course-math">$A_1,A_2,\dots,A_n$</code> 为一组事件。若同时满足以下三条：
+          </p>
+          <ul>
+            <li>两两互不相容，即 <code class="course-math">$A_iA_j=\varnothing$</code>（<code class="course-math">$i\neq j$</code>）；</li>
+            <li>并集为整个样本空间，即 <code class="course-math">$A_1\cup A_2\cup\cdots\cup A_n=\Omega$</code>；</li>
+            <li>每个事件的概率都大于零，即 <code class="course-math">$P(A_i)>0$</code>。</li>
+          </ul>
+          <p>
+            则称 <code class="course-math">$A_1,A_2,\dots,A_n$</code> 为样本空间的一个<strong>完备事件组</strong>，也称为 <code class="course-math">$\Omega$</code> 的一个<strong>划分</strong>。
+          </p>
+          <p>
+            三个条件缺一不可：前两条保证“不重不漏”地覆盖所有可能情形，第三条保证后面用到的条件概率 <code class="course-math">$P(B\mid A_i)$</code> 有意义。当 <code class="course-math">$n=2$</code> 时，完备事件组就是最常用的形式：<code class="course-math">$A$</code> 与它的对立事件 <code class="course-math">$\overline{A}$</code>。例如“产品合格”与“产品不合格”，就是一组最简单的完备事件组。
+          </p>
+
+          <h3>2. 全概率公式</h3>
+          <p>
+            <strong>定理</strong>：设 <code class="course-math">$A_1,A_2,\dots,A_n$</code> 为样本空间的一个完备事件组，<code class="course-math">$B$</code> 为任意事件，则
+          </p>
+          <p class="course-formula">$$P(B)=\sum_{i=1}^{n}P(A_i)\,P(B\mid A_i)$$</p>
+          <p>
+            它的读法是：结果 <code class="course-math">$B$</code> 发生的总概率，等于“每一种成因 <code class="course-math">$A_i$</code> 发生的概率”乘上“在该成因下 <code class="course-math">$B$</code> 发生的概率”，再对所有成因求和。
+          </p>
+
+          <h3>3. 公式为什么成立</h3>
+          <p>
+            把 <code class="course-math">$B$</code> 与整个样本空间相交，再把 <code class="course-math">$\Omega$</code> 换成完备事件组的并集：
+          </p>
+          <p class="course-formula">$$B=B\cap\Omega=B\cap(A_1\cup A_2\cup\cdots\cup A_n)=(BA_1)\cup(BA_2)\cup\cdots\cup(BA_n)$$</p>
+          <p>
+            因为 <code class="course-math">$A_1,A_2,\dots,A_n$</code> 两两互不相容，切出来的 <code class="course-math">$BA_1,BA_2,\dots,BA_n$</code> 也两两互不相容，于是可以直接用概率的有限可加性把各项拆开，再对每一项使用乘法公式 <code class="course-math">$P(BA_i)=P(A_i)P(B\mid A_i)$</code>，就得到全概率公式。
+          </p>
+          <p class="course-note">
+            理解要点：全概率公式的本质是“分情形加权求和”。权重是各成因自身的概率 <code class="course-math">$P(A_i)$</code>，被加权平均的对象是“在该成因下结果发生的概率” <code class="course-math">$P(B\mid A_i)$</code>。当直接计算 <code class="course-math">$P(B)$</code> 很困难、而“分情形”很清楚时，它就是首选工具。
+          </p>
+        </section>
+
+        <section id="sec-bayes">
+          <h2>二、贝叶斯公式</h2>
+
+          <h3>1. 先验、似然与后验</h3>
+          <p>
+            全概率公式解决的是“由因推果”，贝叶斯公式解决的则是它的逆问题：“由果溯因”。在贝叶斯公式里，三个概率各有专门的名字，理解它们的含义比背公式更重要：
+          </p>
+          <ul>
+            <li>
+              <strong>先验概率</strong> <code class="course-math">$P(A_i)$</code>：在做观测（或试验）之前，我们对“成因 <code class="course-math">$A_i$</code> 本身”的可能性所作的判断。它通常来自历史数据、产量结构或经验。例如三条生产线的产量占比 25%、35%、40% 就是先验概率。
+            </li>
+            <li>
+              <strong>似然</strong> <code class="course-math">$P(B\mid A_i)$</code>：假设成因 <code class="course-math">$A_i$</code> 已经成立，观测到结果 <code class="course-math">$B$</code> 的可能性。它由问题的“机制”决定，例如三条生产线的次品率 5%、4%、2%。
+            </li>
+            <li>
+              <strong>后验概率</strong> <code class="course-math">$P(A_i\mid B)$</code>：在已经观测到结果 <code class="course-math">$B$</code> 之后，对成因 <code class="course-math">$A_i$</code> 作出的修正判断。它就是贝叶斯公式最终要计算的东西。
+            </li>
+          </ul>
+          <p>
+            一句话概括：先验概率加上观测数据（通过似然起作用），得到后验概率。这个过程称为<strong>贝叶斯更新</strong>。
+          </p>
+
+          <h3>2. 贝叶斯公式</h3>
+          <p>
+            <strong>定理</strong>：设 <code class="course-math">$A_1,A_2,\dots,A_n$</code> 为完备事件组，<code class="course-math">$B$</code> 为任意事件且 <code class="course-math">$P(B)>0$</code>，则对每个 <code class="course-math">$i=1,2,\dots,n$</code> 有
+          </p>
+          <p class="course-formula">$$P(A_i\mid B)=\frac{P(A_iB)}{P(B)}=\frac{P(A_i)\,P(B\mid A_i)}{\sum_{j=1}^{n}P(A_j)\,P(B\mid A_j)}$$</p>
+          <p>
+            分子用的是乘法公式 <code class="course-math">$P(A_iB)=P(A_i)P(B\mid A_i)$</code>，分母用的是全概率公式。所以贝叶斯公式并没有引入新工具，它只是“乘法公式 + 全概率公式”的组合：
+          </p>
+          <p class="course-formula">$$\text{后验概率}\ \propto\ \text{似然}\times\text{先验概率}$$</p>
+          <p>
+            分母 <code class="course-math">$\sum_{j=1}^{n}P(A_j)P(B\mid A_j)$</code> 是一个与 <code class="course-math">$i$</code> 无关的常数，它唯一的作用是归一化，保证 <code class="course-math">$\sum_{i=1}^{n}P(A_i\mid B)=1$</code>。
+          </p>
+
+          <h3>3. 与全概率公式的关系</h3>
+          <p>
+            两者共用同一个前提（完备事件组），也共用同一份“分解”。全概率公式把分母 <code class="course-math">$P(B)$</code> 算出来，方向是“由因到果”；贝叶斯公式在已知 <code class="course-math">$P(B)$</code> 的前提下，把每个成因的贡献份额 <code class="course-math">$P(A_i)P(B\mid A_i)$</code> 还原成因的概率，方向是“由果到因”。
+          </p>
+          <p>
+            因此解题时通常先设事件、写出先验与似然，再用全概率公式求分母，最后用贝叶斯公式求后验——两步合起来就是一道完整的题。
+          </p>
+        </section>
+
+        <section id="sec-example">
+          <h2>三、典型例题：次品来源推断</h2>
+          <p>
+            <strong>题目</strong>：某工厂有甲、乙、丙三条生产线，产量分别占全厂总产量的 <code class="course-math">$25\%$</code>、<code class="course-math">$35\%$</code>、<code class="course-math">$40\%$</code>，三条生产线的次品率分别为 <code class="course-math">$5\%$</code>、<code class="course-math">$4\%$</code>、<code class="course-math">$2\%$</code>。现从该厂生产的产品中随机抽取一件，求：
+          </p>
+          <ol>
+            <li>抽到次品的概率；</li>
+            <li>若已知抽到的是次品，求它分别来自甲、乙、丙三条生产线的概率。</li>
+          </ol>
+
+          <h3>第一步：设事件，并写出已知概率</h3>
+          <p>
+            设 <code class="course-math">$A_1,A_2,A_3$</code> 分别表示“抽到的产品来自甲、乙、丙生产线”，<code class="course-math">$D$</code> 表示“抽到的产品是次品”。由题意：
+          </p>
+          <p class="course-formula">$$P(A_1)=0.25,\qquad P(A_2)=0.35,\qquad P(A_3)=0.40$$</p>
+          <p class="course-formula">$$P(D\mid A_1)=0.05,\qquad P(D\mid A_2)=0.04,\qquad P(D\mid A_3)=0.02$$</p>
+          <p>
+            <code class="course-math">$A_1,A_2,A_3$</code> 两两互不相容，且并集为整个样本空间（任取一件产品，必来自且只来自其中一条线）；它们的概率之和 <code class="course-math">$0.25+0.35+0.40=1$</code>，每个概率都大于零。因此它们构成一个完备事件组，可以放心使用全概率公式。
+          </p>
+
+          <h3>第二步：用全概率公式求 <code class="course-math">$P(D)$</code></h3>
+          <p class="course-formula">$$P(D)=P(A_1)P(D\mid A_1)+P(A_2)P(D\mid A_2)+P(A_3)P(D\mid A_3)$$</p>
+          <p class="course-formula">$$=0.25\times 0.05+0.35\times 0.04+0.40\times 0.02$$</p>
+          <p class="course-formula">$$=0.0125+0.0140+0.0080=0.0345$$</p>
+          <p class="course-answer">
+            <strong>答（1）</strong>：任取一件产品，抽到次品的概率为 <code class="course-math">$P(D)=0.0345$</code>，即约 <code class="course-math">$3.45\%$</code>。
+          </p>
+
+          <h3>第三步：用贝叶斯公式求后验概率</h3>
+          <p>以甲生产线为例：</p>
+          <p class="course-formula">$$P(A_1\mid D)=\frac{P(A_1)P(D\mid A_1)}{P(D)}=\frac{0.0125}{0.0345}=\frac{125}{345}=\frac{25}{69}\approx 0.3623$$</p>
+          <p>
+            这里把分子分母同乘 <code class="course-math">$10000$</code> 化为整数再约分（<code class="course-math">$125/345$</code> 同时除以 <code class="course-math">$5$</code> 得 <code class="course-math">$25/69$</code>），可以避免小数除法带来的精度误差。同理：
+          </p>
+          <p class="course-formula">$$P(A_2\mid D)=\frac{0.0140}{0.0345}=\frac{140}{345}=\frac{28}{69}\approx 0.4058$$</p>
+          <p class="course-formula">$$P(A_3\mid D)=\frac{0.0080}{0.0345}=\frac{80}{345}=\frac{16}{69}\approx 0.2319$$</p>
+          <p>
+            校验：<code class="course-math">$\frac{25}{69}+\frac{28}{69}+\frac{16}{69}=\frac{69}{69}=1$</code>，三个后验概率之和为 <code class="course-math">$1$</code>，说明计算自洽。
+          </p>
+
+          <table class="course-table">
+            <caption>表 1-4-1　三条生产线的先验概率、似然、贡献份额与后验概率</caption>
+            <thead>
+              <tr>
+                <th>生产线</th>
+                <th class="num">产量占比（先验）<code class="course-math">$P(A_i)$</code></th>
+                <th class="num">次品率（似然）<code class="course-math">$P(D\mid A_i)$</code></th>
+                <th class="num">贡献份额 <code class="course-math">$P(A_i)P(D\mid A_i)$</code></th>
+                <th class="num">后验概率 <code class="course-math">$P(A_i\mid D)$</code></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>甲生产线</td>
+                <td class="num">25%</td>
+                <td class="num">5%</td>
+                <td class="num">0.0125</td>
+                <td class="num">25/69 ≈ 36.23%</td>
+              </tr>
+              <tr>
+                <td>乙生产线</td>
+                <td class="num">35%</td>
+                <td class="num">4%</td>
+                <td class="num">0.0140</td>
+                <td class="num">28/69 ≈ 40.58%</td>
+              </tr>
+              <tr>
+                <td>丙生产线</td>
+                <td class="num">40%</td>
+                <td class="num">2%</td>
+                <td class="num">0.0080</td>
+                <td class="num">16/69 ≈ 23.19%</td>
+              </tr>
+              <tr class="is-total">
+                <td>合计</td>
+                <td class="num">100%</td>
+                <td class="num">—</td>
+                <td class="num">0.0345</td>
+                <td class="num">1</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p class="course-answer">
+            <strong>答（2）</strong>：若已知抽到的是次品，它来自甲、乙、丙三条生产线的概率分别约为 <code class="course-math">$36.23\%$</code>、<code class="course-math">$40.58\%$</code>、<code class="course-math">$23.19\%$</code>。
+          </p>
+
+          <h3>第四步：结果解读</h3>
+          <p>
+            值得注意的是：甲线的次品率最高（<code class="course-math">$5\%$</code>），但“这件次品来自甲线”的后验概率并不是最大的——乙线反而最大（<code class="course-math">$40.58\%$</code>）。原因在于乙线的产量占比更高（<code class="course-math">$35\%>25\%$</code>），产量权重把它的“次品贡献”抬了上去。
+          </p>
+          <p>
+            这正是贝叶斯思想的价值：后验概率由先验（产量占比）与似然（次品率）共同决定。如果只按次品率排序，就会得出“次品最可能来自甲线”的错误结论。
+          </p>
+          <p>
+            另外要区分两个不同的量：<code class="course-math">$P(A_1D)=P(A_1)P(D\mid A_1)=0.0125$</code> 是“抽到甲线产品且它是次品”的联合概率，而 <code class="course-math">$P(A_1\mid D)=0.3623$</code> 是“在已知是次品的条件下来自甲线”的条件概率，两者的数值含义完全不同。
+          </p>
+        </section>
+
+        <section id="sec-animation">
+          <h2>四、动画演示：先验如何被数据改写</h2>
+          <p>
+            下面的交互动画把先验概率、命中率（似然）与后验概率的关系做成了可视化演示：拖动滑块改变先验与似然，观察后验概率随之被“拉动”。动画来自本课程动画库，参数结构与本节例题同构。
+          </p>
+          <div class="course-anim">
+            <iframe src="/animations/adapter.html?id=bayes" style="width:100%;height:640px;border:0" title="贝叶斯公式交互动画"></iframe>
+            <p class="course-anim-caption">
+              交互提示：把“先验概率”滑块调到约 30%，再逐步提高“命中率”，可以看到后验概率被显著抬高，这就是贝叶斯更新最直观的体现。
+            </p>
+          </div>
+        </section>
+
+        <section id="sec-video">
+          <h2>五、视频讲解</h2>
+          <p>
+            教师讲解视频：从完备事件组的判断讲起，逐步推导全概率公式与贝叶斯公式，并完整演算上面那道次品来源例题。
+          </p>
+          <div class="course-media">
+            <video id="lesson-video" class="course-video" controls preload="metadata" poster="" data-title="全概率公式与贝叶斯公式">
+              <source src="/media/probability/1-4-total-probability-and-bayes.mp4" type="video/mp4" />
+              您的浏览器不支持 HTML5 视频播放，请升级浏览器后再观看本节课的视频讲解。
+            </video>
+            <p class="course-media-caption">视频：1.4 全概率公式与贝叶斯公式（时长约 31 分钟）</p>
+          </div>
+          <p class="course-note">
+            演示说明：本页为离线演示页，视频源以占位路径写入，不引用任何真实文件；播放器的进度信息（<code class="course-math">currentTime</code> / <code class="course-math">duration</code>）可被悬浮助手读取，用于判断学生看到哪里。
+          </p>
+        </section>
+
+        <section id="sec-pitfalls">
+          <h2>六、易错点</h2>
+          <ol class="course-pitfalls">
+            <li>
+              <strong>只检验“互不相容”，忘了“并集是整个样本空间”。</strong>完备事件组必须同时满足互不相容、并集为 <code class="course-math">$\Omega$</code>、概率大于零三条。例如掷一颗骰子时取 <code class="course-math">$A_1=\{1\}$</code>、<code class="course-math">$A_2=\{2\}$</code>，它们互不相容，但 <code class="course-math">$A_1\cup A_2=\{1,2\}\neq\Omega$</code>，不是完备事件组；此时使用全概率公式会漏掉 <code class="course-math">$\{3,4,5,6\}$</code> 这几种情形，算出的概率偏小。
+            </li>
+            <li>
+              <strong>把联合概率当成后验概率（漏除分母）。</strong><code class="course-math">$P(A_i)P(B\mid A_i)$</code> 是联合概率 <code class="course-math">$P(A_iB)$</code>，量级可能很小；后验概率 <code class="course-math">$P(A_i\mid B)$</code> 还必须除以 <code class="course-math">$P(B)$</code> 做归一化。另一种常见错法是分母写错，误把 <code class="course-math">$P(B\mid A_i)$</code> 当作分母，导致算出的“后验概率”大于 <code class="course-math">$1$</code>。
+            </li>
+            <li>
+              <strong>先验与似然张冠李戴。</strong><code class="course-math">$P(A_i)$</code> 是“成因”的无条件概率，<code class="course-math">$P(B\mid A_i)$</code> 是“在该成因下结果发生”的条件概率，两者写反会得到完全不同的数值。判断技巧：先找出被“划分”的那个事件（本例中是三条生产线），它对应的概率就是先验；“在这个成因下观测到结果”的概率才是似然。
+            </li>
+          </ol>
+        </section>
+
+        <section id="sec-summary">
+          <h2>七、小结</h2>
+          <ul>
+            <li>完备事件组（划分）是全概率公式与贝叶斯公式的共同前提：互不相容、并集为 <code class="course-math">$\Omega$</code>、每个概率为正。</li>
+            <li>全概率公式用于“由因推果”，本质是分情形加权求和。</li>
+            <li>贝叶斯公式用于“由果溯因”，分子是乘法公式，分母是全概率公式。</li>
+            <li>解题三步走：① 设事件、写出先验与似然；② 用全概率公式求分母；③ 用贝叶斯公式求后验，并用“后验之和为 1”自检。</li>
+            <li>
+              本例结论：<code class="course-math">$P(D)=0.0345$</code>；<code class="course-math">$P(A_1\mid D)=\frac{25}{69}\approx 36.23\%$</code>，<code class="course-math">$P(A_2\mid D)=\frac{28}{69}\approx 40.58\%$</code>，<code class="course-math">$P(A_3\mid D)=\frac{16}{69}\approx 23.19\%$</code>。
+            </li>
+          </ul>
+          <p>
+            下一节 1.5 将讨论事件的独立性，它会把乘法公式 <code class="course-math">$P(AB)=P(A)P(B)$</code> 变成一种可以直接判定的性质。
+          </p>
+        </section>
+
+      </article>
+
+      <!-- ======================= 底部：上一节 / 下一节（装饰性） ======================= -->
+      <footer class="course-pager">
+        <a class="course-pager-btn" href="#">‹ 上一节：1.3 条件概率与乘法公式</a>
+        <a class="course-pager-btn course-pager-next" href="#">下一节：1.5 事件的独立性 ›</a>
+      </footer>
+    </main>
+
+  </div>
+</div>
+
+<!-- 伴学助手加载器（由助手侧提供，本页只负责挂载） -->
+<script src="/widget/loader.js" data-api="" data-auto-open="false"></script>
+</body>
+</html>

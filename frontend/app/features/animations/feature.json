@@ -1,0 +1,10 @@
+{
+  "id": "animations",
+  "dir": "animations",
+  "title": "交互动画",
+  "icon": "🎬",
+  "route": "animations",
+  "group": "资源",
+  "order": 40,
+  "subtitle": "8 个自包含 H5 动画 · 可被 Agent 推荐与驱动"
+}

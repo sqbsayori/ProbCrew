@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>概率论与数理统计 · 多智能体学习系统（原型）</title>
+  <meta name="description" content="基于 LangGraph 多 Agent 协作的概率论学习辅助系统原型骨架" />
+
+  <!-- 设计令牌与外壳样式 -->
+  <link rel="stylesheet" href="/styles/tokens.css" />
+  <link rel="stylesheet" href="/styles/app.css" />
+  <link rel="stylesheet" href="/styles/components.css" />
+
+  <!-- 本地 KaTeX（离线可用，不依赖 CDN） -->
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- ================= 侧边栏：导航由 router.renderNav() 按 feature 注册表生成 ================= -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-mark">π</div>
+        <div>
+          <h1>概率论学习系统</h1>
+          <span>Multi-Agent Prototype</span>
+        </div>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="sidebar-foot" id="sysStatus">
+        <div><span class="badge-dot dot-warn"></span>正在检测后端…</div>
+      </div>
+    </aside>
+
+    <div class="overlay" id="overlay" onclick="document.getElementById('sidebar').classList.remove('open');this.classList.remove('show')"></div>
+
+    <!-- ================= 主区 ================= -->
+    <div class="main">
+      <header class="topbar">
+        <div class="row">
+          <button
+            class="btn btn-ghost"
+            id="menuBtn"
+            title="菜单"
+            onclick="document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show')"
+          >☰</button>
+          <div>
+            <h2 id="pageTitle">工作台</h2>
+            <span class="topbar-sub" id="pageSub">概率论与数理统计 · 智能学习系统</span>
+          </div>
+        </div>
+        <div class="topbar-right" id="topbarRight"></div>
+      </header>
+
+      <!-- feature 视图挂载点：router 会往这里塞 .page 节点 -->
+      <main id="view-host"></main>
+    </div>
+  </div>
+
+  <noscript>
+    <div style="padding:32px;font-family:sans-serif">
+      <h2>需要启用 JavaScript</h2>
+      <p>本原型是单页应用，请启用 JavaScript 后刷新。</p>
+      <p><a href="/animations/_raw/index.html">直接打开交互动画导航（无需 JS）</a></p>
+    </div>
+  </noscript>
+
+  <script type="module" src="/app/bootstrap.js"></script>
+</body>
+</html>

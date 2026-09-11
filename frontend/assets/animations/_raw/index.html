@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>概率论与随机过程交互动画导航</title>
+  <style>
+    :root{
+      --bg:#eef5ff;
+      --bg-2:#f9fbff;
+      --ink:#152033;
+      --muted:#66758f;
+      --line:rgba(57,91,148,.16);
+      --card:rgba(255,255,255,.84);
+      --card-strong:#fff;
+      --blue:#2f6df6;
+      --cyan:#18b7cf;
+      --purple:#7257ff;
+      --orange:#ff9f43;
+      --green:#12b886;
+      --shadow:0 22px 60px rgba(28,45,83,.16);
+      --shadow-soft:0 12px 30px rgba(28,45,83,.10);
+      --radius:26px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      min-height:100vh;
+      color:var(--ink);
+      font-family:"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",system-ui,-apple-system,Segoe UI,Arial,sans-serif;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(47,109,246,.22), transparent 34rem),
+        radial-gradient(circle at 88% 12%, rgba(24,183,207,.18), transparent 30rem),
+        radial-gradient(circle at 50% 100%, rgba(114,87,255,.14), transparent 36rem),
+        linear-gradient(135deg,var(--bg),var(--bg-2));
+    }
+    body:before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.45;
+      background-image:
+        linear-gradient(rgba(47,109,246,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47,109,246,.06) 1px, transparent 1px);
+      background-size:36px 36px;
+      mask-image:linear-gradient(to bottom, rgba(0,0,0,.7), transparent 78%);
+    }
+    .shell{position:relative;max-width:1240px;margin:0 auto;padding:34px 22px 56px}
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px;
+    }
+    .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.02em}
+    .logo{
+      width:42px;height:42px;border-radius:14px;
+      display:grid;place-items:center;color:white;font-size:22px;
+      background:linear-gradient(135deg,var(--blue),var(--cyan));
+      box-shadow:0 14px 30px rgba(47,109,246,.28);
+    }
+    .mini{font-size:13px;color:var(--muted)}
+    .hero{
+      position:relative;overflow:hidden;border:1px solid var(--line);border-radius:34px;
+      background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,255,255,.70));
+      box-shadow:var(--shadow);backdrop-filter:blur(16px);padding:44px 42px 36px;
+    }
+    .hero:after{
+      content:"";position:absolute;right:-70px;top:-80px;width:280px;height:280px;border-radius:50%;
+      background:conic-gradient(from 180deg, rgba(47,109,246,.20), rgba(24,183,207,.20), rgba(114,87,255,.18), rgba(47,109,246,.20));
+      filter:blur(.2px);
+    }
+    .hero-content{position:relative;z-index:1;display:grid;grid-template-columns:1.25fr .75fr;gap:30px;align-items:center}
+    .eyebrow{
+      display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
+      color:#1e4ed8;background:rgba(47,109,246,.09);font-size:13px;font-weight:700;margin-bottom:16px;
+    }
+    h1{margin:0;font-size:clamp(32px,5vw,58px);line-height:1.12;letter-spacing:.01em}
+    .lead{margin:18px 0 0;color:var(--muted);font-size:17px;line-height:1.8;max-width:760px}
+    .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .stat{
+      border:1px solid var(--line);background:rgba(255,255,255,.70);border-radius:22px;padding:18px;box-shadow:var(--shadow-soft);
+    }
+    .stat strong{display:block;font-size:32px;line-height:1;color:var(--blue);margin-bottom:8px}
+    .stat span{font-size:13px;color:var(--muted)}
+    .toolbar{
+      display:flex;gap:12px;align-items:center;justify-content:space-between;margin:24px 0 18px;
+      padding:14px;border:1px solid var(--line);border-radius:24px;background:rgba(255,255,255,.70);backdrop-filter:blur(12px);
+      box-shadow:0 10px 28px rgba(28,45,83,.08);
+    }
+    .search{position:relative;flex:1;min-width:220px}
+    .search input{
+      width:100%;height:46px;border:1px solid rgba(47,109,246,.14);outline:none;border-radius:16px;
+      padding:0 16px 0 44px;background:white;color:var(--ink);font-size:15px;
+    }
+    .search:before{content:"🔎";position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:16px;opacity:.65}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .tab{
+      border:1px solid rgba(47,109,246,.12);background:white;color:#2c3b55;border-radius:999px;padding:11px 15px;
+      font-size:14px;cursor:pointer;transition:.2s ease;white-space:nowrap;
+    }
+    .tab:hover,.tab.active{color:white;background:linear-gradient(135deg,var(--blue),var(--cyan));box-shadow:0 10px 22px rgba(47,109,246,.22)}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;margin-top:18px}
+    .card{
+      position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:224px;padding:22px;
+      border:1px solid var(--line);border-radius:var(--radius);background:var(--card);
+      box-shadow:var(--shadow-soft);backdrop-filter:blur(14px);transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .card:hover{transform:translateY(-6px);box-shadow:0 22px 42px rgba(28,45,83,.16);border-color:rgba(47,109,246,.36)}
+    .card:before{
+      content:"";position:absolute;inset:0 0 auto 0;height:6px;background:linear-gradient(90deg,var(--accent),rgba(255,255,255,0));
+    }
+    .card:after{
+      content:"";position:absolute;right:-48px;bottom:-52px;width:132px;height:132px;border-radius:50%;background:var(--accent);opacity:.08;
+    }
+    .icon{
+      width:52px;height:52px;display:grid;place-items:center;border-radius:18px;color:white;font-size:26px;
+      background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent),white 34%));
+      box-shadow:0 12px 24px color-mix(in srgb,var(--accent),transparent 72%);
+    }
+    .card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px;position:relative;z-index:1}
+    .badge{font-size:12px;padding:6px 9px;border-radius:999px;color:color-mix(in srgb,var(--accent),black 20%);background:color-mix(in srgb,var(--accent),white 86%);font-weight:700;white-space:nowrap}
+    .title{font-size:20px;line-height:1.35;font-weight:800;margin:0 0 10px;position:relative;z-index:1}
+    .desc{margin:0;color:var(--muted);font-size:14px;line-height:1.7;position:relative;z-index:1;flex:1}
+    .actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:20px;position:relative;z-index:2}
+    .open{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;border:0;cursor:pointer;
+      border-radius:14px;padding:11px 14px;color:white;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent),#111 6%));
+      font-size:14px;font-weight:800;box-shadow:0 12px 24px color-mix(in srgb,var(--accent),transparent 76%);
+    }
+    .alt{
+      display:inline-flex;align-items:center;justify-content:center;text-decoration:none;border-radius:12px;padding:10px 11px;
+      color:#395070;background:rgba(255,255,255,.88);border:1px solid rgba(57,80,112,.14);font-size:12px;font-weight:700;
+    }
+    .note{
+      margin-top:22px;padding:16px 18px;border:1px solid rgba(255,159,67,.22);border-radius:20px;
+      background:linear-gradient(135deg,rgba(255,159,67,.10),rgba(255,255,255,.62));color:#795119;font-size:14px;line-height:1.7;
+    }
+    .hidden{display:none!important}
+    footer{margin-top:28px;text-align:center;color:var(--muted);font-size:13px}
+    noscript a{display:block;margin:8px 0;color:#1e4ed8}
+    @media (max-width:1050px){.grid{grid-template-columns:repeat(3,1fr)}.hero-content{grid-template-columns:1fr}.stats{grid-template-columns:repeat(4,1fr)}}
+    @media (max-width:820px){.grid{grid-template-columns:repeat(2,1fr)}.toolbar{flex-direction:column;align-items:stretch}.tabs{justify-content:flex-start}.stats{grid-template-columns:repeat(2,1fr)}.hero{padding:34px 24px}}
+    @media (max-width:520px){.shell{padding:22px 14px 38px}.grid{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}.hero{border-radius:26px}.card{min-height:205px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div class="brand"><div class="logo">π</div><div>概率论与随机过程<br><span class="mini">Interactive Animation Hub</span></div></div>
+      <div class="mini">本页请与 8 个 html 文件放在同一文件夹</div>
+    </div>
+
+    <section class="hero">
+      <div class="hero-content">
+        <div>
+          <div class="eyebrow">✨ 课程动画资源导航</div>
+          <h1>交互式概率动画主页面</h1>
+          <p class="lead">点击下方卡片即可打开对应的 H5 演示。页面支持搜索与分类筛选，适合直接放入课程资源包、数字教材或课堂演示文件夹中使用。</p>
+        </div>
+        <div class="stats" aria-label="资源统计">
+          <div class="stat"><strong>8</strong><span>个交互网页</span></div>
+          <div class="stat"><strong>4</strong><span>主题分类</span></div>
+          <div class="stat"><strong>H5</strong><span>本地打开</span></div>
+          <div class="stat"><strong>1</strong><span>统一入口</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="toolbar" aria-label="搜索与分类">
+      <div class="search"><input id="searchInput" type="search" placeholder="搜索：贝叶斯、马尔科夫链、网络流量……" /></div>
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-filter="全部">全部</button>
+        <button class="tab" data-filter="概率基础">概率基础</button>
+        <button class="tab" data-filter="随机过程">随机过程</button>
+        <button class="tab" data-filter="仿真建模">仿真建模</button>
+        <button class="tab" data-filter="应用案例">应用案例</button>
+      </div>
+    </section>
+
+    <section class="grid" id="grid" aria-label="动画资源列表"></section>
+
+    <div class="note">
+      <strong>中心极限定理已修正：</strong>主按钮使用文件名 <code>中心极限定理 (g).html</code>。如果你的文件名中没有空格或有两个空格，卡片中也提供了“备用1/备用2”入口。
+    </div>
+
+    <footer>建议文件名不要随意改动；若改名，请同步修改本页资源列表中的 filename。</footer>
+
+    <noscript>
+      <p>浏览器未启用 JavaScript 时，可使用以下链接：</p>
+      <a href="./贝叶斯公式(g).html">贝叶斯公式(g).html</a>
+      <a href="./布丰投针(g).html">布丰投针(g).html</a>
+      <a href="./马尔科夫链%20(g).html">马尔科夫链 (g).html</a>
+      <a href="./随机变量变换可视化交互动画(g).html">随机变量变换可视化交互动画(g).html</a>
+      <a href="./中心极限定理%20(g).html">中心极限定理 (g).html</a>
+      <a href="./连续型边缘分布生成演示动画(g).html">连续型边缘分布生成演示动画(g).html</a>
+      <a href="./网络流量仿真(g).html">网络流量仿真(g).html</a>
+      <a href="./推荐系统马尔可夫链(g).html">推荐系统马尔可夫链(g).html</a>
+    </noscript>
+  </main>
+
+  <script>
+    const resources = [
+      {
+        title: "贝叶斯公式",
+        filename: "贝叶斯公式(g).html",
+        desc: "通过先验、似然和后验的动态变化，理解贝叶斯更新思想。",
+        tag: "概率基础",
+        icon: "🧠",
+        accent: "#2f6df6"
+      },
+      {
+        title: "布丰投针",
+        filename: "布丰投针(g).html",
+        desc: "用随机投针实验直观展示几何概率与 π 的估计过程。",
+        tag: "概率基础",
+        icon: "📐",
+        accent: "#ff9f43"
+      },
+      {
+        title: "马尔科夫链",
+        filename: "马尔科夫链 (g).html",
+        desc: "观察状态转移、转移矩阵和长期稳定分布的形成过程。",
+        tag: "随机过程",
+        icon: "🔁",
+        accent: "#7257ff"
+      },
+      {
+        title: "随机变量变换",
+        filename: "随机变量变换可视化交互动画(g).html",
+        desc: "展示随机变量函数变换前后，概率密度曲线如何发生改变。",
+        tag: "概率基础",
+        icon: "〽️",
+        accent: "#18b7cf"
+      },
+      {
+        title: "中心极限定理",
+        filename: "中心极限定理(g).html",
+        desc: "通过样本均值分布的逐步收敛，理解正态近似的核心思想。",
+        tag: "概率基础",
+        icon: "🔔",
+        accent: "#12b886"
+      },
+      {
+        title: "连续型边缘分布",
+        filename: "连续型边缘分布生成演示动画(g).html",
+        desc: "从联合密度曲面到边缘密度曲线，直观看懂积分投影。",
+        tag: "概率基础",
+        icon: "🌊",
+        accent: "#0ca6e9"
+      },
+      {
+        title: "网络流量仿真",
+        filename: "网络流量仿真(g).html",
+        desc: "模拟网络请求、排队、拥塞与吞吐量变化的动态过程。",
+        tag: "仿真建模",
+        icon: "🌐",
+        accent: "#ef476f"
+      },
+      {
+        title: "推荐系统马尔可夫链",
+        filename: "推荐系统马尔可夫链(g).html",
+        desc: "将用户兴趣迁移建模为马尔科夫链，演示推荐概率演化。",
+        tag: "应用案例",
+        icon: "⭐",
+        accent: "#8a63d2"
+      }
+    ];
+
+    const grid = document.getElementById("grid");
+    const searchInput = document.getElementById("searchInput");
+    const tabs = document.getElementById("tabs");
+    let activeFilter = "全部";
+
+    function fileUrl(name){
+      return "./" + encodeURIComponent(name).replace(/%2F/g,"/");
+    }
+
+    function render(){
+      const q = searchInput.value.trim().toLowerCase();
+      grid.innerHTML = "";
+      resources
+        .filter(item => activeFilter === "全部" || item.tag === activeFilter)
+        .filter(item => !q || (item.title + item.filename + item.desc + item.tag).toLowerCase().includes(q))
+        .forEach(item => {
+          const card = document.createElement("article");
+          card.className = "card";
+          card.style.setProperty("--accent", item.accent);
+          const altLinks = (item.alternatives || []).map((alt, index) =>
+            `<a class="alt" href="${fileUrl(alt)}" title="${alt}">备用${index + 1}</a>`
+          ).join("");
+          card.innerHTML = `
+            <div class="card-head">
+              <div class="icon">${item.icon}</div>
+              <div class="badge">${item.tag}</div>
+            </div>
+            <h2 class="title">${item.title}</h2>
+            <p class="desc">${item.desc}</p>
+            <div class="actions">
+              <a class="open" href="${fileUrl(item.filename)}" title="${item.filename}">打开演示 <span>→</span></a>
+              ${altLinks}
+            </div>
+          `;
+          grid.appendChild(card);
+        });
+      if(!grid.children.length){
+        grid.innerHTML = `<article class="card" style="--accent:#2f6df6"><h2 class="title">没有找到匹配资源</h2><p class="desc">请换一个关键词，或点击“全部”查看所有网页文件。</p></article>`;
+      }
+    }
+
+    searchInput.addEventListener("input", render);
+    tabs.addEventListener("click", e => {
+      const btn = e.target.closest(".tab");
+      if(!btn) return;
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      btn.classList.add("active");
+      activeFilter = btn.dataset.filter;
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>

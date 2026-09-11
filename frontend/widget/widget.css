@@ -1,0 +1,647 @@
+/* ============================================================================
+   概率论伴学助手 · 组件样式
+   ----------------------------------------------------------------------------
+   本文件被注入到 Shadow Root 内部（见 render.js 的 injectStyles）。
+   因此：
+   1. 不会污染宿主课程平台的样式；
+   2. 宿主的样式也不会影响我们 —— 只有字体等可继承属性会透进来，
+      所以关键属性都显式声明。
+   ========================================================================== */
+
+:host {
+  all: initial;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.psa-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* 容器不吃事件，只有子元素吃 */
+  z-index: 2147483000; /* 高于绝大多数课程平台的弹层 */
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Segoe UI', sans-serif;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+.psa-root > * {
+  pointer-events: auto;
+}
+
+/* ---------------- 悬浮球 / 页宠 ---------------- */
+
+.psa-launcher {
+  position: fixed;
+  width: 68px;
+  height: 68px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  border-radius: 50%;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+.psa-launcher:hover {
+  transform: scale(1.08);
+}
+.psa-launcher:active {
+  cursor: grabbing;
+  transform: scale(0.95);
+}
+.psa-launcher.psa-dragging {
+  transition: none;
+  transform: scale(1.06);
+}
+.psa-launcher canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 6px 16px rgba(15, 23, 42, 0.28));
+}
+
+/* 未读 / 提醒小圆点 */
+.psa-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.5);
+  display: none;
+}
+.psa-badge.psa-show {
+  display: block;
+}
+
+/* 划词时冒出的快捷入口 */
+.psa-sel-chip {
+  position: fixed;
+  z-index: 2;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(79, 70, 229, 0.42);
+  animation: psa-pop 0.16s ease-out;
+}
+.psa-sel-chip.psa-show {
+  display: inline-flex;
+}
+@keyframes psa-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.94);
+  }
+}
+
+/* ---------------- 面板 ---------------- */
+
+.psa-panel {
+  position: fixed;
+  right: 18px;
+  bottom: 100px;
+  width: 392px;
+  max-width: calc(100vw - 24px);
+  height: min(620px, calc(100vh - 140px));
+  display: none;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 26px 60px -12px rgba(15, 23, 42, 0.34), 0 8px 20px -8px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  animation: psa-up 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.psa-panel.psa-open {
+  display: flex;
+}
+@keyframes psa-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* 头部 */
+.psa-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #4338ca, #4f46e5 55%, #6366f1);
+  color: #fff;
+  flex-shrink: 0;
+}
+.psa-head-avatar {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+}
+.psa-head-text {
+  flex: 1;
+  min-width: 0;
+}
+.psa-head-text b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.psa-head-text span {
+  display: block;
+  font-size: 11.5px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.psa-icon-btn {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.psa-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ---------------- 动画控制条（只在交互动画页面上出现） ---------------- */
+.psa-animbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #eef2ff;
+  border-bottom: 1px solid #c7d2fe;
+  flex-shrink: 0;
+}
+.psa-anim-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4338ca;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+.psa-anim-ctrls {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.psa-anim-btn {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #c7d2fe;
+  border-radius: 7px;
+  background: #fff;
+  color: #4338ca;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-family: inherit;
+  transition: background 0.14s;
+}
+.psa-anim-btn:hover:not(:disabled) {
+  background: #e0e7ff;
+}
+.psa-anim-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.psa-anim-state {
+  font-size: 11px;
+  color: #6366f1;
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 上下文条：让用户看见"读到了什么" */
+.psa-context {
+  padding: 8px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 11.5px;
+  color: #475569;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  flex-shrink: 0;
+}
+.psa-context.psa-ctx-warn {
+  background: #fffbeb;
+  color: #92400e;
+}
+.psa-context .psa-ctx-ico {
+  flex-shrink: 0;
+}
+.psa-context .psa-ctx-body {
+  flex: 1;
+  min-width: 0;
+}
+.psa-context summary {
+  cursor: pointer;
+  color: #4f46e5;
+  font-size: 11px;
+  margin-top: 3px;
+  list-style: none;
+}
+.psa-context summary::-webkit-details-marker {
+  display: none;
+}
+.psa-ctx-outline {
+  margin-top: 5px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  max-height: 130px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #475569;
+}
+
+/* 消息区 */
+.psa-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fff;
+}
+.psa-body::-webkit-scrollbar {
+  width: 8px;
+}
+.psa-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.psa-msg {
+  max-width: 92%;
+  padding: 10px 13px;
+  border-radius: 13px;
+  font-size: 13.5px;
+  word-break: break-word;
+}
+.psa-msg-user {
+  align-self: flex-end;
+  background: #4f46e5;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.psa-msg-ai {
+  align-self: flex-start;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-bottom-left-radius: 4px;
+  max-width: 100%;
+  width: 100%;
+}
+
+.psa-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12.5px;
+  padding: 18px 8px;
+  line-height: 1.9;
+}
+
+/* AI 回答里的排版 */
+.psa-msg-ai h1,
+.psa-msg-ai h2,
+.psa-msg-ai h3,
+.psa-msg-ai h4 {
+  margin: 12px 0 6px;
+  line-height: 1.4;
+}
+.psa-msg-ai h2 {
+  font-size: 15px;
+  color: #4338ca;
+}
+.psa-msg-ai h3 {
+  font-size: 14px;
+}
+.psa-msg-ai p {
+  margin: 7px 0;
+}
+.psa-msg-ai ul,
+.psa-msg-ai ol {
+  margin: 7px 0 7px 19px;
+}
+.psa-msg-ai li {
+  margin: 3px 0;
+}
+.psa-msg-ai blockquote {
+  margin: 8px 0;
+  padding: 7px 11px;
+  border-left: 3px solid #4f46e5;
+  background: #eef2ff;
+  border-radius: 0 7px 7px 0;
+  color: #475569;
+  font-size: 13px;
+}
+.psa-msg-ai hr {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 12px 0;
+}
+.psa-msg-ai a {
+  color: #4f46e5;
+  text-decoration: none;
+}
+.psa-msg-ai a:hover {
+  text-decoration: underline;
+}
+.psa-code {
+  background: #eef2ff;
+  color: #4338ca;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+.psa-tex-fallback {
+  display: inline-block;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  word-break: break-all;
+}
+.psa-math-block {
+  display: block;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 5px 0;
+}
+.psa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin: 8px 0;
+}
+.psa-table th,
+.psa-table td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+.psa-table th {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* 光标（流式输出时的闪烁） */
+.psa-caret::after {
+  content: '▍';
+  color: #4f46e5;
+  animation: psa-blink 1s steps(2) infinite;
+}
+@keyframes psa-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* 正在协作的提示 */
+.psa-working {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #64748b;
+}
+.psa-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.psa-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4f46e5;
+  animation: psa-bounce 1.1s infinite;
+}
+.psa-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.psa-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes psa-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+/* HITL 卡片 */
+.psa-hitl {
+  border: 1px solid #fcd34d;
+  border-left: 4px solid #f59e0b;
+  background: #fffbeb;
+  border-radius: 11px;
+  padding: 11px 13px;
+  margin-top: 9px;
+}
+.psa-hitl b {
+  color: #92400e;
+  font-size: 13px;
+}
+.psa-hitl p {
+  font-size: 12.5px;
+  color: #78350f;
+  margin: 6px 0;
+}
+.psa-hitl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+/* 通用按钮 */
+.psa-btn {
+  padding: 6px 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.psa-btn:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.psa-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.psa-btn-primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #fff;
+}
+.psa-btn-primary:hover:not(:disabled) {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+.psa-btn-success {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+.psa-btn-success:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+
+/* 快捷动作 */
+.psa-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 10px;
+  flex-shrink: 0;
+}
+.psa-quick .psa-btn {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+/* 输入区 */
+.psa-composer {
+  border-top: 1px solid #e2e8f0;
+  padding: 10px 12px;
+  background: #fff;
+  flex-shrink: 0;
+}
+.psa-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.psa-input {
+  flex: 1;
+  min-height: 38px;
+  max-height: 120px;
+  padding: 9px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  font-size: 13.5px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  color: #0f172a;
+  background: #fff;
+}
+.psa-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+.psa-send {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 11px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s;
+}
+.psa-send:hover:not(:disabled) {
+  background: #4338ca;
+}
+.psa-send:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.psa-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 6px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 窄屏：面板铺满 */
+@media (max-width: 640px) {
+  .psa-panel {
+    right: 8px;
+    left: 8px;
+    bottom: 88px;
+    width: auto;
+    height: min(70vh, calc(100vh - 120px));
+  }
+}
+
+/* 尊重系统的"减少动效"设置 */
+@media (prefers-reduced-motion: reduce) {
+  .psa-panel,
+  .psa-launcher,
+  .psa-sel-chip {
+    animation: none;
+    transition: none;
+  }
+  .psa-dots i {
+    animation: none;
+  }
+}

@@ -1,0 +1,611 @@
+/* ============================================================================
+   lesson.css —— 「概率论与数理统计」在线课程 · 课件页样式
+   ----------------------------------------------------------------------------
+   命名空间约定：
+     本文件所有选择器都以 .course- 类名开头，并且结构性样式统一用
+     `.course-shell ...` 限定作用范围，**不使用任何全局元素选择器**
+     （唯一例外是 body.course-body，且带类名限定）。
+     原因：将来这个页面上会挂一个浮动的伴学助手组件（/widget/loader.js），
+     它通常挂在 body 下、.course-shell 之外，因此不会被本文件影响。
+   ----------------------------------------------------------------------------
+   视觉目标：像国内高校在线课程平台（超星学习通一类）的课件页，
+             而不是营销落地页 —— 深色顶栏、浅灰侧栏、正文窄栏、字号偏小偏密。
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. 页面基底（仅作用于带 .course-body 的 body）
+   ------------------------------------------------------------------------ */
+body.course-body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  color: #0f172a;
+  background: #eef1f5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 盒模型只在自己的容器内统一，避免影响同页的助手组件 */
+.course-shell,
+.course-shell * {
+  box-sizing: border-box;
+}
+
+.course-shell {
+  --course-topbar-h: 52px;
+  --course-line: var(--border, #e2e8f0);
+  --course-line-strong: var(--border-strong, #cbd5e1);
+  --course-ink: var(--text, #0f172a);
+  --course-ink-2: var(--text-2, #475569);
+  --course-ink-3: var(--text-3, #94a3b8);
+  --course-brand: var(--primary, #4f46e5);
+  --course-brand-dark: var(--primary-dark, #4338ca);
+  --course-brand-soft: var(--primary-light, #eef2ff);
+  --course-side-bg: #f7f9fc;
+  --course-max-w: 1320px;
+  --course-read-w: 880px;
+  min-height: 100vh;
+}
+
+/* ---------------------------------------------------------------------------
+   2. 顶部深色导航条（面包屑 + 学习进度）
+   ------------------------------------------------------------------------ */
+.course-shell .course-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--sidebar-bg, #1e293b);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.18);
+}
+
+.course-shell .course-topbar-inner {
+  max-width: var(--course-max-w);
+  margin: 0 auto;
+  min-height: var(--course-topbar-h);
+  padding: 8px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.course-shell .course-crumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.course-shell .course-crumb a {
+  color: #94a3b8;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+
+.course-shell .course-crumb a:hover {
+  color: #ffffff;
+  border-bottom-color: rgba(255, 255, 255, 0.5);
+}
+
+.course-shell .course-crumb-sep {
+  color: #475569;
+}
+
+.course-shell .course-crumb-cur {
+  color: #f1f5f9;
+  font-weight: 600;
+}
+
+.course-shell .course-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.course-shell .course-progress-track {
+  display: inline-block;
+  width: 132px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+/* 演示数据：学习进度 62% */
+.course-shell .course-progress-fill {
+  display: block;
+  width: 62%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #22d3ee);
+}
+
+.course-shell .course-progress b {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   3. 两栏骨架：左目录 + 右正文
+   ------------------------------------------------------------------------ */
+.course-shell .course-layout {
+  display: flex;
+  align-items: flex-start;
+  max-width: var(--course-max-w);
+  margin: 0 auto;
+}
+
+/* ---- 3.1 左侧课程目录（浅灰底） ---- */
+.course-shell .course-toc {
+  flex: 0 0 246px;
+  width: 246px;
+  position: sticky;
+  top: var(--course-topbar-h);
+  max-height: calc(100vh - var(--course-topbar-h));
+  overflow-y: auto;
+  background: var(--course-side-bg);
+  border-right: 1px solid var(--course-line);
+  padding: 14px 0 44px;
+}
+
+.course-shell .course-toc-title {
+  padding: 2px 18px 10px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--course-ink-3);
+  border-bottom: 1px solid var(--course-line);
+  margin-bottom: 8px;
+}
+
+.course-shell .course-toc-list,
+.course-shell .course-toc-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.course-shell .course-toc-list > li + li {
+  margin-top: 6px;
+}
+
+.course-shell .course-toc-chapter {
+  margin: 8px 0 4px;
+  padding: 0 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.course-shell .course-toc-item {
+  display: block;
+  padding: 6px 16px 6px 26px;
+  font-size: 13.5px;
+  color: var(--course-ink-2);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  line-height: 1.6;
+}
+
+.course-shell .course-toc-item:hover {
+  background: #eaeff6;
+  color: #1e293b;
+}
+
+.course-shell .course-toc-item.is-current {
+  background: var(--course-brand-soft);
+  border-left-color: var(--course-brand);
+  color: var(--course-brand-dark);
+  font-weight: 600;
+}
+
+/* ---- 3.2 右侧正文区 ---- */
+.course-shell .course-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 18px 26px 56px;
+}
+
+.course-shell .course-article {
+  max-width: var(--course-read-w);
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid var(--course-line);
+  border-radius: 6px;
+  padding: 30px 42px 44px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+/* ---------------------------------------------------------------------------
+   4. 正文排版（全部限定在 .course-article 内）
+   ------------------------------------------------------------------------ */
+.course-shell .course-article h1 {
+  margin: 0 0 10px;
+  padding: 0 0 14px;
+  font-size: 23px;
+  line-height: 1.45;
+  font-weight: 700;
+  color: var(--course-ink);
+  letter-spacing: 0.2px;
+  border-bottom: 1px solid var(--course-line);
+}
+
+.course-shell .course-article h2 {
+  margin: 32px 0 12px;
+  padding: 0 0 0 11px;
+  font-size: 18px;
+  line-height: 1.5;
+  font-weight: 700;
+  color: var(--course-ink);
+  border-left: 4px solid var(--course-brand);
+}
+
+.course-shell .course-article h3 {
+  margin: 22px 0 8px;
+  padding: 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* 注意：这里故意用 article p（特指度 0,1,2），低于下面各类“功能块”
+   （公式块 / 提示块 / 结论块 / 图注，特指度 0,2,0），
+   这样功能块自己的 font-size、margin、text-align 才不会被正文段落规则覆盖。 */
+.course-shell article p {
+  margin: 0 0 13px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1.85;
+  color: #1f2937;
+  text-align: justify;
+}
+
+.course-shell .course-article ul,
+.course-shell .course-article ol {
+  margin: 0 0 15px;
+  padding: 0 0 0 26px;
+  font-size: 15px;
+  line-height: 1.85;
+  color: #1f2937;
+}
+
+.course-shell .course-article ul {
+  list-style: disc outside;
+}
+
+.course-shell .course-article ol {
+  list-style: decimal outside;
+}
+
+.course-shell .course-article li {
+  margin: 0 0 7px;
+  padding: 0;
+  line-height: 1.8;
+  text-align: justify;
+}
+
+.course-shell .course-article li::marker {
+  color: var(--course-brand);
+}
+
+.course-shell .course-article strong {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.course-shell .course-article a {
+  color: var(--course-brand);
+  text-decoration: none;
+}
+
+.course-shell .course-article a:hover {
+  text-decoration: underline;
+}
+
+/* 标题下的一行课程元信息 */
+.course-shell .course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 0 0 18px;
+  padding: 0 0 12px;
+  font-size: 12.5px;
+  color: var(--course-ink-3);
+  border-bottom: 1px dashed var(--course-line);
+}
+
+.course-shell .course-lead {
+  font-size: 15px;
+  color: #334155;
+}
+
+/* ---------------------------------------------------------------------------
+   5. 公式：页面不引 KaTeX，公式以纯文本 LaTeX 保留，这里做成“公式块”外观
+   ------------------------------------------------------------------------ */
+.course-shell .course-formula {
+  margin: 14px 0;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px dashed var(--course-line-strong);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  font-size: 13.5px;
+  line-height: 2;
+  color: #1e293b;
+  text-align: center;
+  overflow-x: auto;
+  word-break: break-word;
+}
+
+/* 行内公式：$...$ 保持纯文本，只做轻微高亮，便于阅读源码 */
+.course-shell .course-math {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+  font-size: 0.92em;
+  padding: 0.5px 4px;
+  background: #f4f7fb;
+  border: 1px solid #e8eef6;
+  border-radius: 3px;
+  color: #334155;
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------------------
+   6. 提示块与结论块
+   ------------------------------------------------------------------------ */
+.course-shell .course-note,
+.course-shell .course-answer,
+.course-shell .course-article .course-note {
+  margin: 14px 0;
+  padding: 11px 15px;
+  font-size: 14px;
+  line-height: 1.8;
+  border-radius: 0 6px 6px 0;
+  background: var(--info-bg, #f0f9ff);
+  border-left: 3px solid var(--info, #0ea5e9);
+  color: #0c4a6e;
+}
+
+.course-shell .course-answer {
+  background: var(--success-bg, #ecfdf5);
+  border-left-color: var(--success, #10b981);
+  border-radius: 6px;
+  color: #065f46;
+}
+
+/* ---------------------------------------------------------------------------
+   7. 表格（三条生产线的先验 / 似然 / 后验）
+   ------------------------------------------------------------------------ */
+.course-shell .course-table {
+  width: 100%;
+  margin: 16px 0 20px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  line-height: 1.65;
+  background: #ffffff;
+}
+
+.course-shell .course-table caption {
+  caption-side: top;
+  margin: 0 0 7px;
+  padding: 0;
+  font-size: 12.5px;
+  color: var(--course-ink-3);
+  text-align: left;
+}
+
+.course-shell .course-table th,
+.course-shell .course-table td {
+  padding: 9px 11px;
+  border: 1px solid var(--course-line);
+  vertical-align: middle;
+}
+
+.course-shell .course-table thead th {
+  background: #f1f5f9;
+  font-weight: 600;
+  color: #334155;
+  font-size: 13px;
+  text-align: left;
+}
+
+/* 用 th.num / td.num 提升特指度，确保能覆盖 thead th 的 text-align: left */
+.course-shell .course-table th.num,
+.course-shell .course-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.course-shell .course-table tbody tr:nth-child(even) td {
+  background: #fafbfd;
+}
+
+.course-shell .course-table tr.is-total td {
+  background: var(--course-brand-soft);
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* 表格里的行内公式再小一点，避免把表撑宽 */
+.course-shell .course-table .course-math {
+  font-size: 0.86em;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   8. 交互动画区（iframe）与视频区
+   ------------------------------------------------------------------------ */
+.course-shell .course-anim {
+  margin: 14px 0 18px;
+  border: 1px solid var(--course-line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.course-shell .course-anim iframe {
+  display: block;
+  background: #ffffff;
+}
+
+.course-shell .course-anim-caption {
+  margin: 0;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--course-ink-3);
+  background: #fafbfd;
+  border-top: 1px solid var(--course-line);
+  text-align: left;
+}
+
+.course-shell .course-media {
+  margin: 14px 0 18px;
+}
+
+.course-shell .course-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0f172a;
+  border: 1px solid var(--course-line);
+  border-radius: 6px;
+}
+
+.course-shell .course-media-caption {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: var(--course-ink-3);
+  text-align: left;
+}
+
+/* ---------------------------------------------------------------------------
+   9. 易错点列表：加一点区分度
+   ------------------------------------------------------------------------ */
+.course-shell .course-article .course-pitfalls > li {
+  margin-bottom: 11px;
+  padding: 9px 13px;
+  background: var(--warning-bg, #fffbeb);
+  border-left: 3px solid var(--warning, #f59e0b);
+  border-radius: 0 5px 5px 0;
+  list-style: decimal inside;
+}
+
+.course-shell .course-article .course-pitfalls > li::marker {
+  color: #b45309;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------------------
+   10. 底部：上一节 / 下一节（装饰性按钮）
+   ------------------------------------------------------------------------ */
+.course-shell .course-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  max-width: var(--course-read-w);
+  margin: 18px auto 0;
+  padding: 0;
+}
+
+.course-shell .course-pager-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  color: var(--course-ink-2);
+  background: #ffffff;
+  border: 1px solid var(--course-line);
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.course-shell .course-pager-btn:hover {
+  border-color: var(--course-line-strong);
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.course-shell .course-pager-next {
+  color: #ffffff;
+  background: var(--course-brand);
+  border-color: var(--course-brand);
+}
+
+.course-shell .course-pager-next:hover {
+  background: var(--course-brand-dark);
+  border-color: var(--course-brand-dark);
+  color: #ffffff;
+}
+
+/* ---------------------------------------------------------------------------
+   11. 响应式：1100px 断点以下隐藏侧栏（正文占满宽度）
+   ------------------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  .course-shell .course-layout {
+    display: block;
+  }
+
+  /* 窄屏隐藏课程目录 */
+  .course-shell .course-toc {
+    display: none;
+  }
+
+  .course-shell .course-main {
+    padding: 14px 14px 44px;
+  }
+
+  .course-shell .course-article {
+    max-width: none;
+    padding: 22px 18px 32px;
+    border-radius: 4px;
+  }
+
+  .course-shell .course-topbar-inner {
+    padding: 8px 14px;
+  }
+
+  .course-shell .course-article h1 {
+    font-size: 20px;
+  }
+
+  .course-shell .course-article h2 {
+    font-size: 17px;
+  }
+
+  .course-shell .course-pager {
+    max-width: none;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .course-shell .course-pager-btn {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .course-shell .course-progress-track {
+    width: 84px;
+  }
+
+  .course-shell .course-article {
+    padding: 18px 14px 26px;
+  }
+}

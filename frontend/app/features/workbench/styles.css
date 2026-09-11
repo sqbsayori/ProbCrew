@@ -1,0 +1,88 @@
+/** 工作台样式（只作用于本页，不会影响别人的页面） */
+/* .wb-hero 已提升到 styles/components.css（架构页也用） */
+
+.wb-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.wb-stat {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow);
+}
+.wb-stat strong { display: block; font-size: 27px; line-height: 1.1; color: var(--primary); }
+.wb-stat span { font-size: 12.5px; color: var(--text-3); }
+.wb-stat em { font-style: normal; font-size: 11.5px; color: var(--text-3); display: block; margin-top: 3px; }
+
+/* Agent 角色卡 */
+.agent-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.agent-card {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--card); padding: 15px 16px;
+  border-top: 3px solid var(--accent, var(--primary));
+  box-shadow: var(--shadow);
+}
+.agent-card-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.agent-card-ico {
+  width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+  font-size: 17px; background: color-mix(in srgb, var(--accent) 13%, white);
+}
+.agent-card h3 { font-size: 14px; }
+.agent-card .role { font-size: 11px; color: var(--text-3); }
+.agent-card p { font-size: 12.5px; color: var(--text-2); line-height: 1.65; min-height: 42px; }
+.agent-card .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.agent-card .tool-line { font-size: 11px; color: var(--text-3); margin-top: 8px; }
+.agent-card .tool-line code {
+  background: #f1f5f9; border-radius: 4px; padding: 1px 5px; margin-right: 3px;
+}
+
+/* 协作拓扑 */
+.flow { display: flex; flex-direction: column; gap: 0; align-items: center; }
+.flow-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.flow-box {
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 9px 14px; font-size: 12.5px; background: #fff;
+  border-left: 3px solid var(--accent, var(--primary));
+  box-shadow: var(--shadow); white-space: nowrap;
+}
+.flow-note { font-size: 11.5px; color: var(--text-3); padding: 2px 0; }
+.flow-arrow { color: var(--text-3); font-size: 15px; line-height: 1; padding: 5px 0; }
+.flow-parallel { display: flex; gap: 8px; padding: 10px 14px; border: 1px dashed var(--border-strong); border-radius: var(--radius); background: #f8fafc; }
+
+@media (max-width: 1100px) { .agent-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) {
+  .wb-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .agent-cards { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------------- 最近运行 ---------------- */
+.wb-runs { display: flex; flex-direction: column; gap: 2px; }
+.wb-run-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.wb-run-row:hover { background: var(--primary-light); }
+.wb-run-q {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wb-run-meta { flex-shrink: 0; font-size: 11px; }
+
+/* ---------------- 知识库概览 ---------------- */
+.wb-kb { display: flex; flex-direction: column; gap: 2px; }
+.wb-kb-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+.wb-kb-row:hover { background: var(--primary-light); }
+.wb-kb-title { flex: 1; font-size: 12.5px; color: var(--text-2); }

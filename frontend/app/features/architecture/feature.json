@@ -1,0 +1,10 @@
+{
+  "id": "architecture",
+  "dir": "architecture",
+  "title": "架构与分工",
+  "icon": "🧩",
+  "route": "architecture",
+  "group": "团队",
+  "order": 60,
+  "subtitle": "事件契约 · 扩展点 · 五人分工与开发计划"
+}

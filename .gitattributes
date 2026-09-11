@@ -1,0 +1,75 @@
+# ============================================================================
+#  换行符与二进制文件规则
+# ----------------------------------------------------------------------------
+#  为什么需要这个文件：
+#    项目里同时有 Windows 专有脚本（.bat/.ps1）、Linux 专有脚本（.sh）
+#    和跨平台源码。如果不管，不同组员的 git 配置不同会导致：
+#      - .sh 被转成 CRLF → Linux 上报 "bash\r: No such file or directory"
+#      - .bat 被转成 LF  → 部分 cmd.exe 解析出错，双击启动失败
+#      - 全文件"假 diff" → 明明没改内容，git 却显示整个文件都变了
+#    这份规则把换行符**固定下来**，与个人 git 配置无关。
+# ============================================================================
+
+# 默认：git 自动判断是否文本文件，仓库内统一存 LF
+* text=auto
+
+# ---- Windows 专有：必须 CRLF ----
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# ---- PowerShell：CRLF 更稳（LF 也能跑，但避免个别版本告警）----
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+
+# ---- Linux/macOS 专有：必须 LF，否则 shebang 会失效 ----
+*.sh text eol=lf
+
+# ---- 源码与文档：统一 LF ----
+*.py   text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.css  text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.txt  text eol=lf
+.gitignore    text eol=lf
+.gitattributes text eol=lf
+.env.example  text eol=lf
+
+# ---- Linux 目标配置：必须 LF ----
+# Dockerfile 带 CRLF 会直接构建失败（`\` 续行后跟 \r，报
+#   /bin/sh: Syntax error: "\" unexpected）
+# nginx.conf / compose 虽然多数情况能读，但保持一致更安全。
+Dockerfile    text eol=lf
+Dockerfile.*  text eol=lf
+*.conf        text eol=lf
+*.service     text eol=lf
+
+# ---- 二进制：禁止任何转换 ----
+*.woff2 binary
+*.woff  binary
+*.ttf   binary
+*.otf   binary
+*.eot   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.zip   binary
+*.pdf   binary
+*.sqlite binary
+
+# ---- 分发相关 ----
+# 打包时不带 dist（§见 scripts/package.py）
+dist/ export-ignore
+.github/ export-ignore
+
+# ---- 让 git 正确统计语言（避免把 vendor 的 KaTeX 算进项目代码量）----
+frontend/vendor/** linguist-vendored
+frontend/assets/animations/_raw/** linguist-vendored

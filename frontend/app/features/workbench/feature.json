@@ -1,0 +1,10 @@
+{
+  "id": "workbench",
+  "dir": "workbench",
+  "title": "工作台",
+  "icon": "🏠",
+  "route": "workbench",
+  "group": "概览",
+  "order": 10,
+  "subtitle": "系统总览 · Agent 角色 · 协作拓扑"
+}

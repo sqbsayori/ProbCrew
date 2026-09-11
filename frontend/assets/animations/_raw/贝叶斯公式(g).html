@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>贝叶斯公式可视化动画</title>
+
+<style>
+:root {
+  --blue-900:#0f4f86;
+  --blue-800:#145d99;
+  --blue-700:#1c73bd;
+  --blue-600:#1e88e5;
+  --blue-500:#2b91e8;
+  --blue-100:#e8f3ff;
+  --blue-050:#f4f9ff;
+
+  --orange:#f28c28;
+  --orange-dark:#d96b00;
+  --green:#57b947;
+  --green-dark:#3d8f32;
+  --gray:#b8c1cc;
+  --dark:#1f2d3d;
+  --muted:#6c7a89;
+
+  --bg:#eef4fa;
+  --card:#ffffff;
+  --line:#dce7f2;
+  --shadow:0 14px 32px rgba(31, 77, 121, 0.14);
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+  color:var(--dark);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(69,153,232,.20), transparent 34%),
+    radial-gradient(circle at 84% 82%, rgba(31,115,189,.13), transparent 30%),
+    var(--bg);
+}
+
+.page{
+  width:min(1320px,96vw);
+  margin:0 auto;
+  padding:0 0 28px;
+}
+
+/* 顶部蓝色标题栏 */
+.hero{
+  position:relative;
+  margin:0 0 20px;
+  padding:24px 34px 26px;
+  color:#fff;
+  border-radius:0 0 22px 22px;
+  overflow:hidden;
+  background:linear-gradient(135deg,var(--blue-900),var(--blue-700) 55%,#2389dc);
+  box-shadow:0 12px 28px rgba(20,93,153,.28);
+}
+
+.hero::before,
+.hero::after{
+  content:"";
+  position:absolute;
+  border:3px solid rgba(255,255,255,.18);
+  border-radius:50%;
+  transform:rotate(-8deg);
+}
+
+.hero::before{
+  width:260px;
+  height:72px;
+  right:110px;
+  top:36px;
+}
+
+.hero::after{
+  width:340px;
+  height:96px;
+  right:-40px;
+  top:70px;
+}
+
+.hero h1{
+  position:relative;
+  z-index:1;
+  margin:0 0 10px;
+  font-size:34px;
+  line-height:1.2;
+  font-weight:900;
+  letter-spacing:.02em;
+}
+
+.hero p{
+  position:relative;
+  z-index:1;
+  margin:0;
+  font-size:17px;
+  line-height:1.6;
+  opacity:.96;
+  font-weight:600;
+}
+
+/* 主布局 */
+.layout{
+  display:grid;
+  grid-template-columns:1fr 430px;
+  gap:20px;
+}
+
+.card{
+  background:rgba(255,255,255,.94);
+  border:1px solid var(--line);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+}
+
+.section{
+  padding:20px;
+}
+
+.section-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 16px;
+  color:var(--blue-900);
+  font-size:22px;
+  font-weight:900;
+}
+
+.section-title::before{
+  content:"";
+  width:7px;
+  height:25px;
+  border-radius:8px;
+  background:var(--blue-600);
+  box-shadow:0 0 0 4px rgba(30,136,229,.08);
+}
+
+/* 公式与图例 */
+.formula-row{
+  display:grid;
+  grid-template-columns:1fr 300px;
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.formula-card{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:98px;
+  padding:16px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:linear-gradient(180deg,#fff,#f7fbff);
+}
+
+.formula-label{
+  margin-right:30px;
+  color:var(--blue-900);
+  font-size:18px;
+  font-weight:900;
+}
+
+.formula{
+  color:#174f96;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:30px;
+  white-space:nowrap;
+}
+
+.frac{
+  display:inline-block;
+  vertical-align:middle;
+  text-align:center;
+  margin:0 4px;
+}
+.frac .top{
+  display:block;
+  padding:0 12px 4px;
+  border-bottom:2px solid #174f96;
+}
+.frac .bottom{
+  display:block;
+  padding:3px 12px 0;
+}
+
+.legend{
+  padding:14px 18px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:linear-gradient(180deg,#fff,#f8fbff);
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin:7px 0;
+  font-weight:800;
+  color:#41546a;
+  font-size:14px;
+}
+
+.dot-key{
+  width:13px;
+  height:13px;
+  border-radius:50%;
+  display:inline-block;
+  background:var(--gray);
+}
+.dot-key.a{background:var(--orange)}
+.dot-key.b{background:var(--blue-500)}
+.dot-key.ab{background:var(--green)}
+
+/* 三步可视化 */
+.story{
+  display:grid;
+  grid-template-columns:1fr 36px 1fr 36px 1fr;
+  gap:10px;
+  align-items:center;
+}
+
+.step-card{
+  min-height:290px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  position:relative;
+  overflow:hidden;
+  transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+
+.step-card.active{
+  transform:translateY(-3px);
+  border-color:rgba(30,136,229,.45);
+  box-shadow:0 16px 32px rgba(30,136,229,.18);
+}
+
+.step-card h3{
+  margin:0;
+  text-align:center;
+  font-size:18px;
+}
+
+.step-card p{
+  margin:5px 0 12px;
+  text-align:center;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+}
+
+.orange{color:var(--orange-dark)}
+.blue{color:var(--blue-700)}
+.green{color:var(--green-dark)}
+
+.arrow{
+  font-size:42px;
+  color:var(--blue-500);
+  text-align:center;
+  animation:floatArrow 1.4s infinite ease-in-out;
+}
+@keyframes floatArrow{
+  0%,100%{transform:translateX(0);opacity:.75}
+  50%{transform:translateX(5px);opacity:1}
+}
+
+.dot-grid{
+  position:relative;
+  margin:0 auto;
+  width:230px;
+  height:170px;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:linear-gradient(180deg,#fbfdff,#f5f9fd);
+}
+
+.pop-dot{
+  position:absolute;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  background:var(--gray);
+  opacity:.95;
+  transition:
+    left 650ms cubic-bezier(.2,.8,.2,1),
+    top 650ms cubic-bezier(.2,.8,.2,1),
+    transform 350ms ease,
+    opacity 350ms ease,
+    background 350ms ease,
+    box-shadow 350ms ease;
+}
+
+.pop-dot.is-a{background:var(--orange)}
+.pop-dot.is-b{
+  background:var(--blue-500);
+  box-shadow:0 0 0 4px rgba(43,145,232,.20);
+}
+.pop-dot.is-ab{
+  background:var(--green);
+  box-shadow:0 0 0 4px rgba(87,185,71,.22);
+  transform:scale(1.22);
+}
+.pop-dot.dim{
+  opacity:.25;
+  transform:scale(.78);
+  box-shadow:none;
+}
+
+.evidence-box{
+  position:absolute;
+  left:17px;
+  top:22px;
+  width:198px;
+  height:102px;
+  border:4px dashed #8b5cf6;
+  border-radius:18px;
+  background:rgba(139,92,246,.10);
+  box-shadow:
+    0 0 0 5px rgba(139,92,246,.12),
+    0 0 22px rgba(139,92,246,.32);
+  opacity:0;
+  transform:scale(.95);
+  transition:opacity .4s ease, transform .4s ease;
+  z-index:2;
+  pointer-events:none;
+}
+.evidence-box.show{
+  opacity:1;
+  transform:scale(1);
+}
+.evidence-label{
+  position:absolute;
+  left:50%;
+  top:-15px;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  padding:5px 10px;
+  border-radius:999px;
+  background:#8b5cf6;
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+  box-shadow:0 6px 12px rgba(139,92,246,.28);
+}
+
+.pills{
+  display:flex;
+  justify-content:center;
+  gap:9px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 12px;
+  border-radius:12px;
+  background:var(--blue-050);
+  color:#3e5870;
+  font-size:13px;
+  font-weight:800;
+  border:1px solid var(--line);
+}
+
+.pill.orange{
+  background:#fff6eb;
+  color:var(--orange-dark);
+  border-color:#ffe0bf;
+}
+.pill.blue{
+  background:#edf6ff;
+  color:var(--blue-700);
+  border-color:#cfe8ff;
+}
+.pill.green{
+  background:#effbeb;
+  color:var(--green-dark);
+  border-color:#d5efcc;
+}
+
+/* 后验圆环 */
+.donut-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:170px;
+}
+
+.donut{
+  width:150px;
+  height:150px;
+  border-radius:50%;
+  background:conic-gradient(var(--green) 0deg, var(--green) 216deg, var(--blue-500) 216deg, var(--blue-500) 360deg);
+  position:relative;
+  box-shadow:0 8px 18px rgba(48,97,143,.13);
+  transition:background 650ms ease;
+}
+
+.donut::after{
+  content:"";
+  position:absolute;
+  inset:32px;
+  border-radius:50%;
+  background:#fff;
+  box-shadow:inset 0 0 0 1px var(--line);
+}
+
+.donut-center{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:1;
+  font-weight:900;
+}
+
+.donut-center span:first-child{
+  color:var(--green-dark);
+  font-size:16px;
+}
+.donut-center span:last-child{
+  color:var(--green-dark);
+  font-size:28px;
+  margin-top:4px;
+}
+
+/* 提示条 */
+.tip{
+  margin-top:16px;
+  padding:11px 14px;
+  border-radius:12px;
+  background:#edf6ff;
+  border:1px solid #cde5ff;
+  color:var(--blue-700);
+  font-weight:800;
+  text-align:center;
+}
+
+.note-mini{
+  margin-top:9px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#f3f9ff;
+  border:1px solid #cfe8ff;
+  color:#355d7d;
+  font-size:12px;
+  line-height:1.45;
+  font-weight:800;
+}
+.note-mini strong{
+  color:#0b82ff;
+}
+
+/* 右侧控制 */
+.control-panel{
+  padding:20px;
+}
+
+.buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:20px;
+}
+
+button{
+  min-height:47px;
+  border:0;
+  border-radius:13px;
+  font-size:17px;
+  font-weight:900;
+  color:#fff;
+  cursor:pointer;
+  transition:transform .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+
+button:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.04);
+}
+
+.btn-green{
+  background:linear-gradient(180deg,#5fbd42,#3d9930);
+  box-shadow:0 8px 14px rgba(61,153,48,.2);
+}
+.btn-muted{
+  background:linear-gradient(180deg,#6e8798,#536c7e);
+}
+.btn-orange{
+  background:linear-gradient(180deg,#ef8b1a,#cf5f00);
+}
+.btn-blue{
+  background:linear-gradient(180deg,#176aa9,#0f4f86);
+}
+
+.slider-group{
+  padding:17px 0;
+  border-top:1px solid var(--line);
+}
+
+.slider-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:9px;
+  font-weight:900;
+}
+
+.slider-head .math{
+  color:var(--blue-600);
+  margin-left:7px;
+}
+
+.value-box{
+  width:66px;
+  text-align:center;
+  padding:7px 8px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#f9fcff;
+  color:#24425e;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+}
+
+input[type="range"]{
+  width:100%;
+  accent-color:var(--blue-600);
+}
+
+.range-labels{
+  display:flex;
+  justify-content:space-between;
+  color:#526679;
+  font-size:13px;
+  font-weight:800;
+  margin-top:3px;
+}
+.range-labels span:nth-child(2){
+  color:#777;
+}
+
+.result-box{
+  margin-top:16px;
+  padding:14px;
+  border:1px dashed #b9d5ee;
+  border-radius:14px;
+  background:#fbfdff;
+}
+
+.result-box h3{
+  margin:0 0 12px;
+  color:var(--blue-900);
+}
+
+.result-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  text-align:center;
+}
+
+.result-item{
+  border-right:1px solid var(--line);
+}
+.result-item:last-child{border-right:0}
+
+.result-item small{
+  display:block;
+  color:#526679;
+  font-weight:800;
+  margin-bottom:5px;
+}
+.result-item strong{
+  display:block;
+  font-size:22px;
+  font-variant-numeric:tabular-nums;
+}
+.result-item em{
+  display:block;
+  font-style:normal;
+  font-size:12px;
+  color:#6f7f8e;
+  margin-top:3px;
+}
+
+.info-strip{
+  margin-top:14px;
+  padding:10px 12px;
+  border-radius:10px;
+  background:#edf6ff;
+  border:1px solid #cde5ff;
+  color:var(--blue-700);
+  font-weight:800;
+  font-size:13px;
+}
+
+/* 底部说明卡片 */
+.explain-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:14px;
+  margin-top:18px;
+}
+
+.explain-card{
+  min-height:126px;
+  padding:17px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:#fff;
+}
+
+.explain-card h3{
+  margin:0 0 8px;
+  font-size:18px;
+}
+
+.explain-card p{
+  margin:0;
+  color:#647487;
+  font-size:13px;
+  line-height:1.55;
+  font-weight:700;
+}
+
+.explain-card.orange-card{
+  background:linear-gradient(180deg,#fff,#fff8f0);
+}
+.explain-card.blue-card{
+  background:linear-gradient(180deg,#fff,#f2f8ff);
+}
+.explain-card.green-card{
+  background:linear-gradient(180deg,#fff,#f4fff0);
+}
+
+.badge{
+  display:inline-block;
+  margin-top:11px;
+  padding:5px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:900;
+}
+.orange-card .badge{background:#fff0dc;color:var(--orange-dark)}
+.blue-card .badge{background:#e7f3ff;color:var(--blue-700)}
+.green-card .badge{background:#eaf8e4;color:var(--green-dark)}
+
+/* 动画提示 */
+.pulse{
+  animation:pulse 850ms ease-in-out;
+}
+@keyframes pulse{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.04)}
+  100%{transform:scale(1)}
+}
+
+@media(max-width:1050px){
+  .layout{grid-template-columns:1fr}
+  .formula-row{grid-template-columns:1fr}
+  .explain-row{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:720px){
+  .hero{padding:22px 20px}
+  .hero h1{font-size:27px}
+  .story{
+    grid-template-columns:1fr;
+  }
+  .arrow{transform:rotate(90deg)}
+  .formula{
+    font-size:23px;
+  }
+  .formula-card{
+    display:block;
+    text-align:center;
+  }
+  .formula-label{
+    display:block;
+    margin:0 0 10px;
+  }
+  .explain-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+  <header class="hero">
+    <h1>贝叶斯公式可视化动画</h1>
+    <p>通过动态可视化展示先验概率、似然和后验概率之间的关系，帮助理解贝叶斯定理的直观含义。</p>
+  </header>
+
+  <main class="layout">
+    <section>
+      <div class="card section">
+        <h2 class="section-title">贝叶斯可视化</h2>
+
+        <div class="formula-row">
+          <div class="formula-card">
+            <span class="formula-label">贝叶斯公式</span>
+            <span class="formula">
+              P(A|B)=
+              <span class="frac">
+                <span class="top">P(B|A) P(A)</span>
+                <span class="bottom">P(B)</span>
+              </span>
+            </span>
+          </div>
+
+          <div class="legend">
+            <div class="legend-item"><span class="dot-key a"></span>A（事件发生）</div>
+            <div class="legend-item"><span class="dot-key"></span>¬A（事件未发生）</div>
+            <div class="legend-item"><span class="dot-key b"></span>B（观察到证据）</div>
+            <div class="legend-item"><span class="dot-key ab"></span>A∩B（既满足 A 又满足 B）</div>
+          </div>
+        </div>
+
+        <div class="story">
+          <div class="step-card active" id="cardPrior">
+            <h3 class="orange">1. 先验 P(A)</h3>
+            <p>在观察证据前的信念</p>
+            <div class="dot-grid" id="gridPrior"></div>
+            <div class="pills">
+              <span class="pill orange" id="pillA">A：30%</span>
+              <span class="pill" id="pillNotA">¬A：70%</span>
+            </div>
+          </div>
+
+          <div class="arrow">➜</div>
+
+          <div class="step-card" id="cardEvidence">
+            <h3 class="blue">2. 证据 B</h3>
+            <p>观察到证据 B</p>
+            <div class="dot-grid" id="gridEvidence">
+              <div class="evidence-box" id="evidenceBox">
+                <span class="evidence-label">证据 B 的样本集合</span>
+              </div>
+            </div>
+            <div class="pills">
+              <span class="pill blue" id="pillB">B：38%</span>
+              <span class="pill green" id="pillAB">A∩B：24%</span>
+            </div>
+            <div class="note-mini">
+              <strong>紫色虚线框</strong>：所有满足证据 B 的样本集合。<br>
+              蓝/绿小圆外圈只是“被证据筛选出来”的高亮效果，不表示新的概率集合。
+            </div>
+          </div>
+
+          <div class="arrow">➜</div>
+
+          <div class="step-card" id="cardPosterior">
+            <h3 class="green">3. 后验 P(A|B)</h3>
+            <p>在证据 B 下的更新信念</p>
+            <div class="donut-wrap">
+              <div class="donut" id="donut">
+                <div class="donut-center">
+                  <span>P(A|B)</span>
+                  <span id="donutText">63.2%</span>
+                </div>
+              </div>
+            </div>
+            <div class="pills">
+              <span class="pill green" id="pillPosterior">A∩B：63.2%</span>
+              <span class="pill blue" id="pillOnlyB">B 但非 A：36.8%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="tip" id="stageTip">
+          贝叶斯思想：用先验信念结合新证据，更新对事件 A 的信念，得到后验概率 P(A|B)。
+        </div>
+      </div>
+
+      <div class="explain-row">
+        <div class="explain-card orange-card">
+          <h3 class="orange">先验 P(A)</h3>
+          <p>在观察任何证据前，对事件 A 发生的信念或经验判断。</p>
+          <span class="badge">我们的起点</span>
+        </div>
+        <div class="explain-card blue-card">
+          <h3 class="blue">似然 P(B|A)</h3>
+          <p>如果 A 发生，观察到证据 B 的可能性有多大。</p>
+          <span class="badge">模型的解释力</span>
+        </div>
+        <div class="explain-card blue-card">
+          <h3 class="blue">证据 B</h3>
+          <p>实际观察到的证据或数据，用于更新信念。</p>
+          <span class="badge">来自世界的信息</span>
+        </div>
+        <div class="explain-card green-card">
+          <h3 class="green">后验 P(A|B)</h3>
+          <p>结合证据 B 后，对事件 A 更新后的信念。</p>
+          <span class="badge">更新后的结论</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card control-panel">
+      <h2 class="section-title">动画控制</h2>
+
+      <div class="buttons">
+        <button class="btn-green" id="playBtn">▶ 开始动画</button>
+        <button class="btn-muted" id="pauseBtn">Ⅱ 暂停</button>
+        <button class="btn-orange" id="stepBtn">▶| 单步演示</button>
+        <button class="btn-blue" id="resetBtn">⟳ 重置</button>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span>先验概率 <span class="math">P(A)</span></span>
+          <span class="value-box" id="priorBox">0.30</span>
+        </div>
+        <input id="prior" type="range" min="1" max="95" value="30" />
+        <div class="range-labels"><span>0</span><span id="priorPercent">30%</span><span>1</span></div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span>命中率 <span class="math">P(B|A)</span></span>
+          <span class="value-box" id="hitBox">0.80</span>
+        </div>
+        <input id="hit" type="range" min="1" max="99" value="80" />
+        <div class="range-labels"><span>0</span><span id="hitPercent">80%</span><span>1</span></div>
+      </div>
+
+      <div class="slider-group">
+        <div class="slider-head">
+          <span>误报率 <span class="math">P(B|¬A)</span></span>
+          <span class="value-box" id="falseBox">0.20</span>
+        </div>
+        <input id="falseRate" type="range" min="1" max="90" value="20" />
+        <div class="range-labels"><span>0</span><span id="falsePercent">20%</span><span>1</span></div>
+      </div>
+
+      <div class="result-box">
+        <h3>计算结果（当前参数）</h3>
+        <div class="result-grid">
+          <div class="result-item">
+            <small>P(B)</small>
+            <strong class="blue" id="pbValue">0.38</strong>
+            <em>证据发生的概率</em>
+          </div>
+          <div class="result-item">
+            <small>P(A|B)</small>
+            <strong class="green" id="posteriorValue">0.63</strong>
+            <em>后验概率</em>
+          </div>
+          <div class="result-item">
+            <small>P(B|A)P(A)</small>
+            <strong class="orange" id="numValue">0.24</strong>
+            <em>分子部分</em>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-strip">
+        调整参数或点击“单步演示”，观察先验、证据、后验的动态变化。
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(function(){
+  const N = 100;
+  const rows = 10;
+  const cols = 10;
+
+  const gridPrior = document.getElementById("gridPrior");
+  const gridEvidence = document.getElementById("gridEvidence");
+  const evidenceBox = document.getElementById("evidenceBox");
+
+  const prior = document.getElementById("prior");
+  const hit = document.getElementById("hit");
+  const falseRate = document.getElementById("falseRate");
+
+  const priorBox = document.getElementById("priorBox");
+  const hitBox = document.getElementById("hitBox");
+  const falseBox = document.getElementById("falseBox");
+
+  const priorPercent = document.getElementById("priorPercent");
+  const hitPercent = document.getElementById("hitPercent");
+  const falsePercent = document.getElementById("falsePercent");
+
+  const pbValue = document.getElementById("pbValue");
+  const posteriorValue = document.getElementById("posteriorValue");
+  const numValue = document.getElementById("numValue");
+
+  const pillA = document.getElementById("pillA");
+  const pillNotA = document.getElementById("pillNotA");
+  const pillB = document.getElementById("pillB");
+  const pillAB = document.getElementById("pillAB");
+  const pillPosterior = document.getElementById("pillPosterior");
+  const pillOnlyB = document.getElementById("pillOnlyB");
+
+  const donut = document.getElementById("donut");
+  const donutText = document.getElementById("donutText");
+
+  const cardPrior = document.getElementById("cardPrior");
+  const cardEvidence = document.getElementById("cardEvidence");
+  const cardPosterior = document.getElementById("cardPosterior");
+  const stageTip = document.getElementById("stageTip");
+
+  const playBtn = document.getElementById("playBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  let dotsPrior = [];
+  let dotsEvidence = [];
+  let stage = 0;
+  let timer = null;
+
+  function pct(x, d=0){
+    return (x*100).toFixed(d) + "%";
+  }
+
+  function dec(x){
+    return x.toFixed(2);
+  }
+
+  function params(){
+    const pA = Number(prior.value) / 100;
+    const pBgA = Number(hit.value) / 100;
+    const pBgNotA = Number(falseRate.value) / 100;
+    const numerator = pBgA * pA;
+    const falsePart = pBgNotA * (1 - pA);
+    const pB = numerator + falsePart;
+    const posterior = pB === 0 ? 0 : numerator / pB;
+    return {pA,pBgA,pBgNotA,numerator,falsePart,pB,posterior};
+  }
+
+  function makeDots(container){
+    const arr = [];
+    for(let i=0;i<N;i++){
+      const d = document.createElement("span");
+      d.className = "pop-dot";
+      container.appendChild(d);
+      arr.push(d);
+    }
+    return arr;
+  }
+
+  function basePos(i){
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    return {
+      left: 18 + col * 21.5,
+      top: 18 + row * 15.2
+    };
+  }
+
+  function updateNumbers(){
+    const c = params();
+
+    priorBox.textContent = dec(c.pA);
+    hitBox.textContent = dec(c.pBgA);
+    falseBox.textContent = dec(c.pBgNotA);
+
+    priorPercent.textContent = pct(c.pA);
+    hitPercent.textContent = pct(c.pBgA);
+    falsePercent.textContent = pct(c.pBgNotA);
+
+    pbValue.textContent = dec(c.pB);
+    posteriorValue.textContent = dec(c.posterior);
+    numValue.textContent = dec(c.numerator);
+
+    pillA.textContent = "A：" + pct(c.pA);
+    pillNotA.textContent = "¬A：" + pct(1-c.pA);
+    pillB.textContent = "B：" + pct(c.pB);
+    pillAB.textContent = "A∩B：" + pct(c.numerator);
+    pillPosterior.textContent = "A∩B：" + pct(c.posterior,1);
+    pillOnlyB.textContent = "B 但非 A：" + pct(1-c.posterior,1);
+
+    const deg = Math.max(0, Math.min(360, c.posterior * 360));
+    donut.style.background = `conic-gradient(var(--green) 0deg, var(--green) ${deg}deg, var(--blue-500) ${deg}deg, var(--blue-500) 360deg)`;
+    donutText.textContent = pct(c.posterior,1);
+  }
+
+  function buildStates(){
+    const c = params();
+    const aCount = Math.round(N * c.pA);
+    const hitCount = Math.round(aCount * c.pBgA);
+    const notACount = N - aCount;
+    const falseCount = Math.round(notACount * c.pBgNotA);
+
+    const items = [];
+    for(let i=0;i<N;i++){
+      const isA = i < aCount;
+      const local = isA ? i : i - aCount;
+      const isAB = isA && local < hitCount;
+      const isFalseB = !isA && local < falseCount;
+      const isB = isAB || isFalseB;
+      items.push({isA,isB,isAB});
+    }
+
+    // 固定洗牌，避免每次随机导致教学演示跳动过强
+    for(let i=items.length-1;i>0;i--){
+      const j = (i * 37 + 17) % (i+1);
+      const temp = items[i];
+      items[i] = items[j];
+      items[j] = temp;
+    }
+    return items;
+  }
+
+  function render(){
+    const items = buildStates();
+    updateNumbers();
+
+    cardPrior.classList.toggle("active", stage === 0);
+    cardEvidence.classList.toggle("active", stage === 1);
+    cardPosterior.classList.toggle("active", stage === 2);
+
+    evidenceBox.classList.toggle("show", stage >= 1);
+
+    if(stage === 0){
+      stageTip.textContent = "第 1 步：先看先验 P(A)。橙色点表示 A，灰色点表示 ¬A。";
+    }else if(stage === 1){
+      stageTip.textContent = "第 2 步：紫色虚线框表示所有满足证据 B 的样本集合；蓝点表示 B 但非 A，绿点表示 A∩B。";
+    }else{
+      stageTip.textContent = "第 3 步：只在所有 B 中重新计算 A 的比例，得到后验概率 P(A|B)。";
+    }
+
+    items.forEach((it,i)=>{
+      const pos = basePos(i);
+
+      const dp = dotsPrior[i];
+      dp.className = "pop-dot";
+      if(it.isA) dp.classList.add("is-a");
+      dp.style.left = pos.left + "px";
+      dp.style.top = pos.top + "px";
+
+      const de = dotsEvidence[i];
+      de.className = "pop-dot";
+
+      if(stage === 0){
+        if(it.isA) de.classList.add("is-a");
+        de.classList.add("dim");
+      }
+
+      if(stage === 1){
+        if(it.isAB) de.classList.add("is-ab");
+        else if(it.isB) de.classList.add("is-b");
+        else de.classList.add("dim");
+      }
+
+      if(stage === 2){
+        if(it.isAB) de.classList.add("is-ab");
+        else if(it.isB) de.classList.add("is-b");
+        else de.classList.add("dim");
+      }
+
+      de.style.left = pos.left + "px";
+      de.style.top = pos.top + "px";
+      de.style.transitionDelay = (i % 10) * 12 + "ms";
+    });
+
+    if(stage === 2){
+      donut.classList.remove("pulse");
+      void donut.offsetWidth;
+      donut.classList.add("pulse");
+    }
+  }
+
+  function nextStage(){
+    stage = (stage + 1) % 3;
+    render();
+  }
+
+  function play(){
+    clearInterval(timer);
+    timer = setInterval(nextStage, 1500);
+  }
+
+  function pause(){
+    clearInterval(timer);
+    timer = null;
+  }
+
+  function reset(){
+    pause();
+    stage = 0;
+    render();
+  }
+
+  dotsPrior = makeDots(gridPrior);
+  dotsEvidence = makeDots(gridEvidence);
+
+  [prior,hit,falseRate].forEach(el => {
+    el.addEventListener("input", () => render());
+  });
+
+  playBtn.addEventListener("click", play);
+  pauseBtn.addEventListener("click", pause);
+  stepBtn.addEventListener("click", () => {
+    pause();
+    nextStage();
+  });
+  resetBtn.addEventListener("click", reset);
+
+  render();
+})();
+</script>
+</body>
+</html>

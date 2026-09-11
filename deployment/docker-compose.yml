@@ -1,0 +1,66 @@
+# ============================================================================
+#  概率论伴学助手 · 原型部署模板
+# ----------------------------------------------------------------------------
+#  ⚠️ 这是**模板**，不是开箱即用的生产配置。
+#     上线前必须处理（详见 docs/07-部署与分发.md §4 与 原型声明.md）：
+#       1. 没有鉴权 —— 任何人都能调用
+#       2. 没有限流 —— 一个脚本就能刷光 API 额度
+#       3. CORS 是 *  —— 必须在 main.py 里收窄
+#       4. 运行记录在内存 —— 重启即丢
+#
+#  用法：
+#     cd our-system
+#     docker compose -f deployment/docker-compose.yml up -d --build
+# ============================================================================
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    image: probstat-assistant:prototype
+    container_name: probstat-app
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      # 容器内要监听 0.0.0.0，否则 Nginx 连不上
+      APP_HOST: 0.0.0.0
+      APP_PORT: "8000"
+    volumes:
+      # 学习记录与 sqlite 持久化（容器重建不丢）
+      - ../backend/data:/app/backend/data
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 8s
+      retries: 3
+      start_period: 20s
+
+  nginx:
+    image: nginx:alpine
+    container_name: probstat-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # 证书目录（用 certbot 申请后放到这里）
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      app:
+        condition: service_healthy
+
+# 说明：原型阶段不需要数据库容器 —— 存储用 Python 内置 sqlite3。
+# P2 阶段接入 Qdrant 混合检索时，在这里加：
+#
+#   qdrant:
+#     image: qdrant/qdrant:latest
+#     ports: ["6333:6333"]
+#     volumes: ["qdrant-data:/qdrant/storage"]
+#
+# volumes:
+#   qdrant-data:

@@ -1,0 +1,10 @@
+{
+  "id": "assistant",
+  "dir": "assistant",
+  "title": "页面助手",
+  "icon": "🐾",
+  "route": "assistant",
+  "group": "资源",
+  "order": 35,
+  "subtitle": "悬浮球 / 页宠 · 三套投递方式 · 现场试玩"
+}

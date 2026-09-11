@@ -1,0 +1,503 @@
+{
+  "version": 1,
+  "generatedFrom": "动画/ (8 个自包含 H5 动画)",
+  "basePath": "/animations/_raw/",
+  "adapter": "/animations/adapter.html",
+  "categories": ["全部", "概率基础", "随机过程", "仿真建模", "应用案例"],
+  "animations": [
+    {
+      "id": "bayes",
+      "title": "贝叶斯公式",
+      "file": "贝叶斯公式(g).html",
+      "category": "概率基础",
+      "description": "用样本点颜色变化演示先验、似然到后验的概率更新。",
+      "accent": "#1e88e5",
+      "icon": "🧠",
+      "canvasCount": 0,
+      "controls": {
+        "play": "#playBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "prior_pa",
+          "label": "先验概率 P(A)",
+          "selector": "#prior",
+          "type": "range",
+          "min": 1,
+          "max": 95,
+          "step": 1,
+          "default": 30
+        },
+        {
+          "name": "hit_rate_pb_given_a",
+          "label": "命中率 P(B|A)",
+          "selector": "#hit",
+          "type": "range",
+          "min": 1,
+          "max": 99,
+          "step": 1,
+          "default": 80
+        },
+        {
+          "name": "false_rate_pb_given_not_a",
+          "label": "误报率 P(B|¬A)",
+          "selector": "#falseRate",
+          "type": "range",
+          "min": 1,
+          "max": 90,
+          "step": 1,
+          "default": 20
+        }
+      ],
+      "readouts": ["P(B)", "P(A|B)", "P(B|A)P(A)"],
+      "concepts": ["条件概率", "全概率公式", "先验概率", "似然", "后验概率", "贝叶斯更新"],
+      "chapter": "ch01",
+      "agentIntents": ["knowledge", "visualize", "problem"],
+      "embedNotes": "无 canvas，纯 DOM 布局，桌面宽度建议 ≥1100px；加载后不自动播放。"
+    },
+    {
+      "id": "buffon-needle",
+      "title": "布丰投针",
+      "file": "布丰投针(g).html",
+      "category": "概率基础",
+      "description": "随机投针并统计相交频率，用实验逐步估计圆周率 π。",
+      "accent": "#57b947",
+      "icon": "📐",
+      "canvasCount": 1,
+      "controls": {
+        "play": "#playBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "line_gap_d",
+          "label": "线距 d",
+          "selector": "#dRange",
+          "type": "range",
+          "min": 70,
+          "max": 150,
+          "step": 1,
+          "default": 100
+        },
+        {
+          "name": "needle_length_l",
+          "label": "针长 L",
+          "selector": "#lRange",
+          "type": "range",
+          "min": 20,
+          "max": 100,
+          "step": 1,
+          "default": 80
+        },
+        {
+          "name": "speed",
+          "label": "动画速度",
+          "selector": "#speedRange",
+          "type": "range",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "name": "batch_throws",
+          "label": "批量投针",
+          "selector": "#batchRange",
+          "type": "range",
+          "min": 10,
+          "max": 1000,
+          "step": 10,
+          "default": 100
+        }
+      ],
+      "readouts": ["总投针数 N", "相交次数 H", "相交频率 H/N", "π 的估计值"],
+      "concepts": ["几何概率", "随机模拟", "蒙特卡洛方法", "频率稳定性", "π 的估计", "大数定律"],
+      "chapter": "ch01",
+      "agentIntents": ["knowledge", "visualize", "problem"],
+      "embedNotes": "单 canvas 高 520px，宽度建议 ≥1120px，含 resize 重绘；不自动播放。"
+    },
+    {
+      "id": "rv-transform",
+      "title": "随机变量变换",
+      "file": "随机变量变换可视化交互动画(g).html",
+      "category": "概率基础",
+      "description": "抽样后经 Y=g(X) 映射，展示新随机变量分布的形成过程。",
+      "accent": "#f28c28",
+      "icon": "〽️",
+      "canvasCount": 3,
+      "controls": {
+        "play": "#playBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "dist_x",
+          "label": "X 的分布",
+          "selector": "#distSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "normal"
+        },
+        {
+          "name": "transform_g",
+          "label": "变换函数 Y=g(X)",
+          "selector": "#transformSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "square"
+        },
+        {
+          "name": "speed",
+          "label": "动画速度",
+          "selector": "#speedRange",
+          "type": "range",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "name": "batch_samples",
+          "label": "批量样本",
+          "selector": "#batchRange",
+          "type": "range",
+          "min": 50,
+          "max": 2000,
+          "step": 50,
+          "default": 200
+        }
+      ],
+      "readouts": ["样本数", "最新 x", "最新 y", "Y 样本均值"],
+      "concepts": ["随机变量函数", "分布变换", "概率密度", "经验分布", "多对一变换", "偏态"],
+      "chapter": "ch02",
+      "agentIntents": ["knowledge", "visualize"],
+      "embedNotes": "三 canvas 并排各高 330px，需宽屏 ≥1180px 否则转单列；不自动播放。"
+    },
+    {
+      "id": "clt",
+      "title": "中心极限定理",
+      "file": "中心极限定理(g).html",
+      "category": "概率基础",
+      "description": "随样本容量 n 增大，标准化样本均值分布趋近标准正态。",
+      "accent": "#2b91e8",
+      "icon": "🔔",
+      "canvasCount": 2,
+      "controls": {
+        "play": "#playBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "sample_size_n",
+          "label": "样本容量 n",
+          "selector": "#nRange",
+          "type": "range",
+          "min": 1,
+          "max": 100,
+          "step": 1,
+          "default": 1
+        },
+        {
+          "name": "population_dist",
+          "label": "原始总体分布",
+          "selector": "#distSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "binomial"
+        }
+      ],
+      "readouts": ["当前样本容量 n", "总体均值 μ", "总体标准差 σ", "模拟次数"],
+      "concepts": ["中心极限定理", "标准化", "正态近似", "样本均值", "大数定律", "总体分布"],
+      "chapter": "ch05",
+      "agentIntents": ["knowledge", "visualize", "problem"],
+      "embedNotes": "双 canvas 并排，宽屏 ≥1120px 效果最好；含 resize 重绘，不自动播放。"
+    },
+    {
+      "id": "marginal-continuous",
+      "title": "连续型边缘分布",
+      "file": "连续型边缘分布生成演示动画(g).html",
+      "category": "概率基础",
+      "description": "在联合密度曲面上切片积分，投影生成 X 与 Y 的边缘密度。",
+      "accent": "#7b61ff",
+      "icon": "🌊",
+      "canvasCount": 3,
+      "controls": {
+        "play": "#playBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "joint_preset",
+          "label": "联合密度示例",
+          "selector": "#presetSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "corrPos"
+        },
+        {
+          "name": "mode",
+          "label": "演示模式",
+          "selector": "#modeSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "both"
+        },
+        {
+          "name": "speed",
+          "label": "动画速度",
+          "selector": "#speedRange",
+          "type": "range",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        }
+      ],
+      "readouts": ["当前 x", "当前 fₓ(x)", "当前 y", "当前 fᵧ(y)", "∫ fₓ(x) dx", "∫ fᵧ(y) dy"],
+      "concepts": ["联合密度函数", "边缘密度", "积分投影", "二维正态", "相关系数", "重积分"],
+      "chapter": "ch03",
+      "agentIntents": ["knowledge", "visualize"],
+      "embedNotes": "曲面+两张小图布局，宽屏最佳；resize 重绘整页，不自动播放。"
+    },
+    {
+      "id": "markov-chain",
+      "title": "马尔科夫链",
+      "file": "马尔科夫链 (g).html",
+      "category": "随机过程",
+      "description": "按可编辑转移矩阵随机跳转，观察状态转移与访问频率。",
+      "accent": "#1F4E79",
+      "icon": "🔁",
+      "canvasCount": 1,
+      "controls": {
+        "play": "#startBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "state_count_n",
+          "label": "状态个数 n",
+          "selector": "#nRange",
+          "type": "range",
+          "min": 3,
+          "max": 10,
+          "step": 1,
+          "default": 5
+        },
+        {
+          "name": "speed_ms",
+          "label": "动画速度",
+          "selector": "#speedRange",
+          "type": "range",
+          "min": 250,
+          "max": 2000,
+          "step": 50,
+          "default": 900
+        },
+        {
+          "name": "transition_matrix",
+          "label": "转移矩阵 P",
+          "selector": ".pCell",
+          "type": "matrix",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": null
+        }
+      ],
+      "readouts": ["当前状态", "已转移步数", "最近转移"],
+      "concepts": ["马尔可夫性", "转移概率矩阵", "状态转移", "随机游走", "访问频率", "平稳分布"],
+      "chapter": "ch02",
+      "agentIntents": ["knowledge", "visualize"],
+      "embedNotes": "canvas 高 600px 且内部固定 820×600，连续 requestAnimationFrame 常驻渲染。"
+    },
+    {
+      "id": "network-traffic",
+      "title": "网络流量仿真",
+      "file": "网络流量仿真(g).html",
+      "category": "仿真建模",
+      "description": "模拟数据包到达、排队、转发与丢包，输出队列和吞吐曲线。",
+      "accent": "#2b91e8",
+      "icon": "🌐",
+      "canvasCount": 2,
+      "controls": {
+        "play": "#playBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "traffic_model",
+          "label": "流量模型",
+          "selector": "#trafficSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "poisson"
+        },
+        {
+          "name": "arrival_rate_lambda",
+          "label": "平均到达率 λ",
+          "selector": "#lambdaRange",
+          "type": "range",
+          "min": 0.2,
+          "max": 4,
+          "step": 0.05,
+          "default": 1.0
+        },
+        {
+          "name": "link_capacity_c",
+          "label": "链路带宽 C",
+          "selector": "#capRange",
+          "type": "range",
+          "min": 0.3,
+          "max": 4.5,
+          "step": 0.05,
+          "default": 1.5
+        },
+        {
+          "name": "buffer_size",
+          "label": "缓冲区容量",
+          "selector": "#bufRange",
+          "type": "range",
+          "min": 1,
+          "max": 20,
+          "step": 1,
+          "default": 8
+        },
+        {
+          "name": "speed",
+          "label": "动画速度",
+          "selector": "#speedRange",
+          "type": "range",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "name": "batch_events",
+          "label": "批量事件",
+          "selector": "#batchRange",
+          "type": "range",
+          "min": 10,
+          "max": 500,
+          "step": 10,
+          "default": 50
+        }
+      ],
+      "readouts": ["业务强度 ρ", "队列长度", "到达包数", "成功转发", "丢包率", "平均时延", "吞吐量", "链路状态"],
+      "concepts": ["泊松到达", "排队论", "服务强度 ρ", "缓冲队列", "丢包率", "时延与吞吐量", "离散事件仿真"],
+      "chapter": "ch02",
+      "agentIntents": ["visualize", "problem"],
+      "embedNotes": "DOM 舞台 + 双图表 canvas 较宽，建议 ≥1100px；不自动播放。"
+    },
+    {
+      "id": "recsys-markov",
+      "title": "推荐系统马尔可夫链",
+      "file": "推荐系统马尔可夫链(g).html",
+      "category": "应用案例",
+      "description": "把用户兴趣迁移建模为马尔可夫链，演示推荐概率与稳定分布。",
+      "accent": "#1F4E79",
+      "icon": "⭐",
+      "canvasCount": 1,
+      "controls": {
+        "play": "#playBtn",
+        "pause": "#pauseBtn",
+        "reset": "#resetBtn",
+        "step": "#stepBtn"
+      },
+      "params": [
+        {
+          "name": "preset",
+          "label": "矩阵示例",
+          "selector": "#presetSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "video"
+        },
+        {
+          "name": "start_state",
+          "label": "初始兴趣状态",
+          "selector": "#startSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "0"
+        },
+        {
+          "name": "rec_mode",
+          "label": "推荐模式",
+          "selector": "#modeSelect",
+          "type": "select",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": "one"
+        },
+        {
+          "name": "speed",
+          "label": "动画速度",
+          "selector": "#speedRange",
+          "type": "range",
+          "min": 1,
+          "max": 5,
+          "step": 1,
+          "default": 3
+        },
+        {
+          "name": "batch_steps",
+          "label": "批量步数",
+          "selector": "#batchRange",
+          "type": "range",
+          "min": 5,
+          "max": 200,
+          "step": 5,
+          "default": 20
+        },
+        {
+          "name": "transition_matrix",
+          "label": "转移概率矩阵 P（可编辑）",
+          "selector": "#matrixTable input",
+          "type": "matrix",
+          "min": null,
+          "max": null,
+          "step": null,
+          "default": null
+        }
+      ],
+      "readouts": ["当前状态", "已转移步数", "最高推荐", "推荐概率", "稳定分布最大项", "路径长度"],
+      "concepts": ["马尔可夫链应用", "用户兴趣建模", "转移概率矩阵", "推荐排序", "稳定分布 π", "随机游走路径"],
+      "chapter": "ch02",
+      "agentIntents": ["knowledge", "visualize", "problem"],
+      "embedNotes": "canvas 高 520px，右列推荐列表，宽屏 ≥1180px 最佳；不自动播放。"
+    }
+  ]
+}

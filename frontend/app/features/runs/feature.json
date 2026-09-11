@@ -1,0 +1,10 @@
+{
+  "id": "runs",
+  "dir": "runs",
+  "title": "运行轨迹",
+  "icon": "🧵",
+  "route": "runs",
+  "group": "数据",
+  "order": 45,
+  "subtitle": "多 Agent 协作全过程留档与回放"
+}

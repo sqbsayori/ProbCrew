@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>推荐系统马尔可夫链演示动画</title>
+<style>
+:root{
+  --bg:#eef4fa;--card:#fff;--line:#dce7f2;--text:#1f2d3d;--muted:#6c7a89;
+  --b900:#0f4f86;--b800:#145d99;--b700:#1c73bd;--b600:#1e88e5;--b500:#2b91e8;
+  --orange:#f28c28;--od:#d96b00;--green:#57b947;--gd:#3d8f32;--red:#ef4444;--gray:#aeb9c6;
+  --shadow:0 14px 32px rgba(31,77,121,.14)
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 15% 8%,rgba(69,153,232,.22),transparent 34%),
+    radial-gradient(circle at 88% 86%,rgba(87,185,71,.13),transparent 30%),
+    var(--bg)
+}
+.page{width:min(1380px,96vw);margin:auto;padding-bottom:30px}
+.hero{
+  position:relative;margin-bottom:20px;padding:24px 34px;color:white;border-radius:0 0 22px 22px;overflow:hidden;
+  background:linear-gradient(135deg,var(--b900),var(--b700) 58%,#2389dc);
+  box-shadow:0 12px 28px rgba(20,93,153,.28)
+}
+.hero:before,.hero:after{
+  content:"";position:absolute;border:3px solid rgba(255,255,255,.18);border-radius:50%;transform:rotate(-9deg)
+}
+.hero:before{width:300px;height:82px;right:120px;top:36px}
+.hero:after{width:380px;height:108px;right:-50px;top:74px}
+.hero h1{position:relative;z-index:1;margin:0 0 10px;font-size:34px;font-weight:900}
+.hero p{position:relative;z-index:1;margin:0;font-size:17px;line-height:1.65;font-weight:650;max-width:980px}
+
+.layout{display:grid;grid-template-columns:1fr 430px;gap:20px}
+.card{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+.section{padding:20px}
+.title{display:flex;align-items:center;gap:10px;margin:0 0 16px;color:var(--b900);font-size:22px;font-weight:900}
+.title:before{content:"";width:7px;height:25px;border-radius:8px;background:var(--b600);box-shadow:0 0 0 4px rgba(30,136,229,.08)}
+
+.top{display:grid;grid-template-columns:1.08fr .92fr;gap:16px;margin-bottom:16px}
+.formula,.tip{padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,#fff,#f7fbff)}
+.formula{text-align:center}.formula h3{margin:0 0 8px;color:var(--b900);font-size:17px}
+.math{font-family:Georgia,"Times New Roman",serif;color:#174f96;font-size:23px;line-height:1.75}.math sub{font-size:70%;vertical-align:-.25em}
+.tip{background:#edf6ff;border-color:#cde5ff;color:var(--b900);font-weight:850;line-height:1.65}
+
+.demo-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+.panel{border:1px solid var(--line);border-radius:18px;background:#fff;overflow:hidden}
+.ph{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:linear-gradient(180deg,#fff,#f8fbff)}
+.ph h3{margin:0;color:var(--b900);font-size:18px}.ph span{color:var(--muted);font-size:13px;font-weight:800}
+canvas{display:block;width:100%;background:#fbfdff}
+#graphCanvas{height:520px}
+.side-panel{display:grid;grid-template-rows:auto auto;gap:16px}
+.recs{padding:14px}
+.rec-card{border:1px solid var(--line);border-radius:14px;background:#fbfdff;padding:11px;margin:9px 0}
+.rec-head{display:flex;justify-content:space-between;align-items:center;font-weight:900;color:var(--b900)}
+.bar-bg{height:12px;border-radius:999px;background:#e8eef5;margin-top:8px;overflow:hidden}
+.bar{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--b500),var(--green));transition:.35s}
+.rec-note{font-size:12px;color:#647487;font-weight:800;margin-top:5px}
+.timeline{padding:14px}
+.path-box{min-height:92px;border-radius:14px;background:#f7fbff;border:1px solid #e0edf8;padding:10px;display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start}
+.chip{padding:6px 10px;border-radius:999px;background:#edf6ff;color:var(--b800);font-weight:900;font-size:13px}
+.chip.now{background:#fff2df;color:var(--od)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+.legend-item{display:flex;align-items:center;gap:7px;color:#42576a;font-size:13px;font-weight:850}
+.key{display:inline-block;width:14px;height:14px;border-radius:50%;background:var(--b500)}
+.key.o{background:var(--orange)}.key.g{background:var(--green)}
+.key.line{width:26px;height:4px;border-radius:99px;background:var(--b500)}
+
+.matrix-card{margin-top:16px;padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff}
+.matrix-card h3{margin:0 0 12px;color:var(--b900);font-size:18px}
+.matrix-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:650px;background:#fff}
+th,td{border-bottom:1px solid #e6eef7;border-right:1px solid #e6eef7;padding:8px;text-align:center;font-weight:850}
+th{background:#edf6ff;color:var(--b900);font-size:13px}
+td:first-child{background:#fff8ed;color:var(--od);font-weight:900}
+td input{width:58px;padding:6px;border:1px solid #d6e4f0;border-radius:8px;text-align:center;font-weight:850;color:#24425e}
+.row-sum{font-size:12px;font-weight:900}
+.bad{color:var(--red)}.ok{color:var(--green)}
+.apply-row{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.small-btn{min-height:38px;border-radius:11px;font-size:14px;padding:0 14px}
+.matrix-note{font-size:13px;color:#526679;font-weight:800;line-height:1.5}
+
+.info{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.ibox{padding:14px;border:1px solid var(--line);border-radius:15px;background:white}
+.ibox h3{margin:0 0 6px;font-size:16px}.ibox p{margin:0;color:#647487;font-size:13px;line-height:1.55;font-weight:700}
+.o h3{color:var(--od)}.bl h3{color:var(--b700)}.g h3{color:var(--gd)}.gr h3{color:#526679}
+
+.control{padding:20px}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+button{min-height:47px;border:0;border-radius:13px;color:white;font-size:16px;font-weight:900;cursor:pointer;transition:.18s}
+button:hover{transform:translateY(-1px);filter:brightness(1.04)}
+.bg{background:linear-gradient(180deg,#5fbd42,#3d9930)}.bm{background:linear-gradient(180deg,#6e8798,#536c7e)}.bo{background:linear-gradient(180deg,#ef8b1a,#cf5f00)}.bb{background:linear-gradient(180deg,#176aa9,#0f4f86)}
+.block{padding:15px 0;border-top:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px;font-weight:900}
+select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#fbfdff;color:#24425e;font-size:15px;font-weight:850}
+.vbox{min-width:88px;text-align:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:#f9fcff;color:#24425e;font-weight:900;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--b600)}
+.rlabels{display:flex;justify-content:space-between;color:#526679;font-size:13px;font-weight:800;margin-top:4px}
+
+.stats{margin-top:15px;padding:14px;border:1px dashed #b9d5ee;border-radius:14px;background:#fbfdff}
+.stats h3{margin:0 0 12px;color:var(--b900)}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{padding:11px 8px;text-align:center;border-radius:12px;background:#f5f9fd;border:1px solid #e0edf8}
+.stat small{display:block;color:#526679;font-weight:800;margin-bottom:4px}
+.stat strong{font-size:21px;font-variant-numeric:tabular-nums}
+.stat em{display:block;margin-top:3px;color:#738596;font-size:12px;font-style:normal;font-weight:700}
+.note{margin-top:14px;padding:13px;border-radius:13px;background:#edf6ff;border:1px solid #cde5ff;color:var(--b900);font-weight:850;line-height:1.6}
+@media(max-width:1180px){.layout{grid-template-columns:1fr}.top,.demo-grid{grid-template-columns:1fr}}
+@media(max-width:860px){.info{grid-template-columns:1fr 1fr}#graphCanvas{height:430px}}
+@media(max-width:560px){.hero{padding:22px 20px}.hero h1{font-size:27px}.buttons,.info{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <h1>推荐系统马尔可夫链演示动画</h1>
+  <p>把用户兴趣看成状态，把浏览行为看成状态转移，通过马尔可夫链预测下一步兴趣，并生成推荐排序。</p>
+</header>
+
+<main class="layout">
+<section>
+<div class="card section">
+<h2 class="title">推荐状态转移演示区</h2>
+
+<div class="top">
+  <div class="formula">
+    <h3>马尔可夫推荐模型</h3>
+    <div class="math">
+      p<sub>t+1</sub> = p<sub>t</sub>P<br>
+      π = πP
+    </div>
+  </div>
+  <div class="tip">
+    当前兴趣状态只影响下一步推荐。矩阵第 i 行表示：用户当前在状态 i 时，下一步转向各兴趣状态的概率。概率越大，推荐优先级越高。
+  </div>
+</div>
+
+<div class="demo-grid">
+  <div class="panel">
+    <div class="ph"><h3>兴趣状态转移图</h3><span id="graphLabel">节点表示兴趣状态，箭头表示转移概率</span></div>
+    <canvas id="graphCanvas"></canvas>
+  </div>
+
+  <div class="side-panel">
+    <div class="panel recs">
+      <div class="ph" style="margin:-14px -14px 12px"><h3>推荐排序</h3><span id="recLabel">基于当前状态的一步转移</span></div>
+      <div id="recList"></div>
+    </div>
+    <div class="panel timeline">
+      <div class="ph" style="margin:-14px -14px 12px"><h3>用户浏览路径</h3><span id="pathLabel">随机游走轨迹</span></div>
+      <div class="path-box" id="pathBox"></div>
+    </div>
+  </div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="key o"></span>当前兴趣</div>
+  <div class="legend-item"><span class="key"></span>候选兴趣</div>
+  <div class="legend-item"><span class="key g"></span>长期稳定兴趣</div>
+  <div class="legend-item"><span class="key line"></span>转移概率</div>
+</div>
+
+<div class="matrix-card">
+  <h3>转移概率矩阵 P（可编辑，每行之和应为 1）</h3>
+  <div class="matrix-wrap"><table id="matrixTable"></table></div>
+  <div class="apply-row">
+    <button class="bb small-btn" id="applyMatrixBtn">应用矩阵</button>
+    <button class="bo small-btn" id="normalizeBtn">自动归一化每行</button>
+    <span class="matrix-note">说明：第 i 行表示从当前兴趣 i 转向下一兴趣的概率分布。</span>
+  </div>
+</div>
+</div>
+
+<div class="info">
+  <div class="ibox o"><h3>1. 用户状态</h3><p>把用户当前兴趣抽象为状态，例如科技、体育、音乐等。</p></div>
+  <div class="ibox bl"><h3>2. 转移概率</h3><p>根据历史行为估计从一个兴趣转向另一个兴趣的概率。</p></div>
+  <div class="ibox g"><h3>3. 下一步推荐</h3><p>当前状态所在行的概率越大，下一步越应该优先推荐。</p></div>
+  <div class="ibox gr"><h3>4. 长期分布</h3><p>经过多步转移后，兴趣分布可能趋于稳定分布 π。</p></div>
+</div>
+</section>
+
+<aside class="card control">
+<h2 class="title">动画控制</h2>
+<div class="buttons">
+  <button class="bg" id="playBtn">▶ 开始动画</button>
+  <button class="bm" id="pauseBtn">Ⅱ 暂停</button>
+  <button class="bo" id="stepBtn">▶| 单步转移</button>
+  <button class="bb" id="resetBtn">⟳ 重置</button>
+</div>
+
+<div class="block">
+  <div class="row"><span>矩阵示例</span></div>
+  <select id="presetSelect">
+    <option value="video">短视频兴趣推荐</option>
+    <option value="shopping">电商浏览推荐</option>
+    <option value="news">新闻阅读推荐</option>
+    <option value="sticky">兴趣黏性较强</option>
+  </select>
+</div>
+
+<div class="block">
+  <div class="row"><span>初始兴趣状态</span></div>
+  <select id="startSelect"></select>
+</div>
+
+<div class="block">
+  <div class="row"><span>推荐模式</span></div>
+  <select id="modeSelect">
+    <option value="one">一步推荐：当前状态 → 下一状态</option>
+    <option value="multi">多步推荐：pₜP 的兴趣分布</option>
+    <option value="stationary">长期推荐：稳定分布 π</option>
+  </select>
+</div>
+
+<div class="block">
+  <div class="row"><span>动画速度</span><span class="vbox" id="speedBox">中</span></div>
+  <input id="speedRange" type="range" min="1" max="5" value="3">
+  <div class="rlabels"><span>慢</span><span>中</span><span>快</span></div>
+</div>
+
+<div class="block">
+  <div class="row"><span>批量步数</span><span class="vbox" id="batchBox">20</span></div>
+  <input id="batchRange" type="range" min="5" max="200" step="5" value="20">
+  <button class="bb" id="batchBtn" style="width:100%;margin-top:12px">＋ 批量转移</button>
+</div>
+
+<div class="stats">
+  <h3>当前指标</h3>
+  <div class="sgrid">
+    <div class="stat"><small>当前状态</small><strong id="currentValue">科技</strong><em>用户当前兴趣</em></div>
+    <div class="stat"><small>已转移步数</small><strong id="stepValue">0</strong><em>浏览行为次数</em></div>
+    <div class="stat"><small>最高推荐</small><strong id="topValue">--</strong><em>概率最大状态</em></div>
+    <div class="stat"><small>推荐概率</small><strong id="probValue">--</strong><em>下一步概率</em></div>
+    <div class="stat"><small>稳定分布最大项</small><strong id="steadyValue">--</strong><em>长期兴趣中心</em></div>
+    <div class="stat"><small>路径长度</small><strong id="pathLenValue">1</strong><em>最多显示 20 个</em></div>
+  </div>
+</div>
+
+<div class="note" id="noteBox">
+  教学提示：马尔可夫链推荐的关键是“下一步只依赖当前状态”。如果要考虑更长历史，可以扩展为高阶马尔可夫模型。
+</div>
+</aside>
+</main>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const canvas=$("graphCanvas"), ctx=canvas.getContext("2d");
+  const playBtn=$("playBtn"), pauseBtn=$("pauseBtn"), stepBtn=$("stepBtn"), resetBtn=$("resetBtn"), batchBtn=$("batchBtn");
+  const presetSelect=$("presetSelect"), startSelect=$("startSelect"), modeSelect=$("modeSelect"), speedRange=$("speedRange"), batchRange=$("batchRange");
+  const matrixTable=$("matrixTable"), recList=$("recList"), pathBox=$("pathBox");
+  const speedBox=$("speedBox"), batchBox=$("batchBox"), currentValue=$("currentValue"), stepValue=$("stepValue"), topValue=$("topValue"), probValue=$("probValue"), steadyValue=$("steadyValue"), pathLenValue=$("pathLenValue");
+  let states=[], icons=[], P=[], current=0, steps=0, path=[], dist=[], timer=null, moving=null;
+
+  const presets={
+    video:{
+      states:["科技","游戏","美食","音乐","运动","影视"],
+      icons:["💡","🎮","🍜","🎧","🏀","🎬"],
+      P:[
+        [.30,.20,.08,.12,.12,.18],
+        [.16,.35,.06,.12,.14,.17],
+        [.10,.06,.45,.12,.12,.15],
+        [.12,.10,.12,.36,.12,.18],
+        [.12,.14,.10,.10,.42,.12],
+        [.15,.12,.10,.18,.10,.35]
+      ]
+    },
+    shopping:{
+      states:["手机","电脑","家电","服饰","食品","图书"],
+      icons:["📱","💻","📺","👕","🍪","📚"],
+      P:[
+        [.36,.22,.12,.08,.08,.14],
+        [.20,.38,.14,.06,.06,.16],
+        [.16,.18,.40,.08,.12,.06],
+        [.06,.06,.10,.48,.20,.10],
+        [.08,.05,.12,.22,.43,.10],
+        [.12,.15,.06,.12,.12,.43]
+      ]
+    },
+    news:{
+      states:["科技","财经","国际","体育","娱乐","教育"],
+      icons:["🔬","💰","🌍","⚽","🎤","🎓"],
+      P:[
+        [.34,.22,.16,.08,.08,.12],
+        [.20,.36,.18,.08,.06,.12],
+        [.16,.20,.34,.10,.10,.10],
+        [.08,.08,.12,.48,.14,.10],
+        [.08,.06,.10,.18,.48,.10],
+        [.16,.10,.10,.08,.10,.46]
+      ]
+    },
+    sticky:{
+      states:["A类","B类","C类","D类","E类","F类"],
+      icons:["A","B","C","D","E","F"],
+      P:[
+        [.70,.08,.06,.04,.06,.06],
+        [.06,.72,.06,.05,.06,.05],
+        [.05,.07,.70,.08,.05,.05],
+        [.04,.06,.08,.70,.06,.06],
+        [.06,.06,.04,.06,.72,.06],
+        [.08,.05,.05,.05,.07,.70]
+      ]
+    }
+  };
+
+  function clone(A){return A.map(r=>r.slice())}
+  function loadPreset(){
+    const pr=presets[presetSelect.value];
+    states=pr.states.slice(); icons=pr.icons.slice(); P=clone(pr.P);
+    startSelect.innerHTML=states.map((s,i)=>`<option value="${i}">${s}</option>`).join("");
+    current=0; startSelect.value=0; reset(false); renderMatrix();
+  }
+
+  function normalizeRows(){
+    for(let i=0;i<P.length;i++){
+      let s=P[i].reduce((a,b)=>a+b,0);
+      if(s<=0){P[i]=P[i].map((_,j)=>j===i?1:0);}
+      else P[i]=P[i].map(v=>v/s);
+    }
+  }
+
+  function renderMatrix(){
+    let html="<tr><th>当前 \\ 下一</th>"+states.map(s=>`<th>${s}</th>`).join("")+"<th>行和</th></tr>";
+    for(let i=0;i<states.length;i++){
+      html+=`<tr><td>${states[i]}</td>`;
+      for(let j=0;j<states.length;j++){
+        html+=`<td><input data-i="${i}" data-j="${j}" value="${P[i][j].toFixed(2)}"></td>`;
+      }
+      const sum=P[i].reduce((a,b)=>a+b,0);
+      html+=`<td class="row-sum ${Math.abs(sum-1)<.01?'ok':'bad'}">${sum.toFixed(2)}</td></tr>`;
+    }
+    matrixTable.innerHTML=html;
+  }
+
+  function applyMatrix(){
+    const inputs=matrixTable.querySelectorAll("input");
+    inputs.forEach(inp=>{
+      const i=+inp.dataset.i, j=+inp.dataset.j;
+      P[i][j]=Math.max(0,+inp.value||0);
+    });
+    renderMatrix();
+    updateAll();
+  }
+
+  function stationary(){
+    const n=states.length;
+    let v=Array(n).fill(1/n), next=Array(n).fill(0);
+    for(let k=0;k<500;k++){
+      next.fill(0);
+      for(let i=0;i<n;i++) for(let j=0;j<n;j++) next[j]+=v[i]*P[i][j];
+      const diff=next.reduce((a,b,i)=>a+Math.abs(b-v[i]),0);
+      v=next.slice();
+      if(diff<1e-10) break;
+    }
+    return v;
+  }
+
+  function nextDist(v){
+    const n=states.length, r=Array(n).fill(0);
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++) r[j]+=v[i]*P[i][j];
+    return r;
+  }
+
+  function choose(row){
+    let r=Math.random(), s=0;
+    for(let j=0;j<row.length;j++){s+=row[j]; if(r<=s) return j;}
+    return row.length-1;
+  }
+
+  function positions(w,h){
+    const cx=w/2, cy=h/2+8, R=Math.min(w,h)*0.34;
+    return states.map((_,i)=>{
+      const a=-Math.PI/2 + i*2*Math.PI/states.length;
+      return {x:cx+R*Math.cos(a), y:cy+R*Math.sin(a)};
+    });
+  }
+
+  function resizeCanvas(){
+    const r=canvas.getBoundingClientRect(), q=devicePixelRatio||1;
+    canvas.width=Math.round(r.width*q); canvas.height=Math.round(r.height*q);
+    ctx.setTransform(q,0,0,q,0,0);
+    return [r.width,r.height];
+  }
+
+  function drawArrow(x1,y1,x2,y2,p,active){
+    const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy);
+    if(len<1) return;
+    const ux=dx/len,uy=dy/len;
+    const sx=x1+ux*48, sy=y1+uy*48, ex=x2-ux*48, ey=y2-uy*48;
+    const mx=(sx+ex)/2, my=(sy+ey)/2;
+    const nx=-uy, ny=ux;
+    const curve=28;
+    ctx.strokeStyle=active?`rgba(242,140,40,.82)`: `rgba(43,145,232,${0.16+0.55*p})`;
+    ctx.lineWidth=active?4:Math.max(1,1+5*p);
+    ctx.beginPath();
+    ctx.moveTo(sx,sy);
+    ctx.quadraticCurveTo(mx+nx*curve,my+ny*curve,ex,ey);
+    ctx.stroke();
+
+    const tx=ex, ty=ey;
+    const ang=Math.atan2(ey-(my+ny*curve), ex-(mx+nx*curve));
+    ctx.fillStyle=ctx.strokeStyle;
+    ctx.beginPath();
+    ctx.moveTo(tx,ty);
+    ctx.lineTo(tx-10*Math.cos(ang-.45), ty-10*Math.sin(ang-.45));
+    ctx.lineTo(tx-10*Math.cos(ang+.45), ty-10*Math.sin(ang+.45));
+    ctx.closePath();
+    ctx.fill();
+
+    if(p>=0.14 || active){
+      ctx.fillStyle=active?"#d96b00":"#526679";
+      ctx.font="900 12px Microsoft YaHei";
+      ctx.fillText(p.toFixed(2), mx+nx*(curve+5), my+ny*(curve+5));
+    }
+  }
+
+  function drawGraph(){
+    const [w,h]=resizeCanvas();
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle="rgba(15,79,134,.055)";
+    ctx.lineWidth=1;
+    for(let x=0;x<w;x+=24){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+    for(let y=0;y<h;y+=24){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+
+    const pos=positions(w,h);
+    const steady=stationary();
+    const maxSteady=Math.max(...steady);
+
+    for(let i=0;i<states.length;i++){
+      const top=topTargets(i,2);
+      top.forEach(j=>{
+        if(i!==j) drawArrow(pos[i].x,pos[i].y,pos[j].x,pos[j].y,P[i][j], i===current);
+      });
+    }
+
+    // self-loop hints
+    for(let i=0;i<states.length;i++){
+      const p=P[i][i];
+      if(p>.12){
+        ctx.strokeStyle=i===current?"rgba(242,140,40,.7)":`rgba(43,145,232,${0.15+p*.45})`;
+        ctx.lineWidth=i===current?4:Math.max(1,1+4*p);
+        ctx.beginPath();
+        ctx.arc(pos[i].x+32,pos[i].y-30,20,0.2,Math.PI*1.8);
+        ctx.stroke();
+        ctx.fillStyle=i===current?"#d96b00":"#526679";
+        ctx.font="900 12px Microsoft YaHei";
+        ctx.fillText(p.toFixed(2),pos[i].x+48,pos[i].y-47);
+      }
+    }
+
+    for(let i=0;i<states.length;i++){
+      const isCur=i===current;
+      const isSteady=steady[i]===maxSteady;
+      const r=isCur?43:38;
+      ctx.beginPath();
+      ctx.arc(pos[i].x,pos[i].y,r+8,0,Math.PI*2);
+      ctx.fillStyle=isCur?"rgba(242,140,40,.16)":isSteady?"rgba(87,185,71,.14)":"rgba(43,145,232,.10)";
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(pos[i].x,pos[i].y,r,0,Math.PI*2);
+      ctx.fillStyle=isCur?"#fff8ed":"#fff";
+      ctx.strokeStyle=isCur?"#f28c28":isSteady?"#57b947":"#2b91e8";
+      ctx.lineWidth=isCur?4:3;
+      ctx.fill(); ctx.stroke();
+
+      ctx.fillStyle=isCur?"#d96b00":isSteady?"#3d8f32":"#145d99";
+      ctx.font="900 23px Microsoft YaHei";
+      ctx.textAlign="center"; ctx.textBaseline="middle";
+      ctx.fillText(icons[i],pos[i].x,pos[i].y-7);
+
+      ctx.font="900 14px Microsoft YaHei";
+      ctx.fillText(states[i],pos[i].x,pos[i].y+22);
+
+      ctx.fillStyle="#6c7a89";
+      ctx.font="800 11px Microsoft YaHei";
+      ctx.fillText("π="+steady[i].toFixed(2),pos[i].x,pos[i].y+r+18);
+    }
+
+    if(moving){
+      const a=pos[moving.from], b=pos[moving.to];
+      const x=a.x+(b.x-a.x)*moving.t;
+      const y=a.y+(b.y-a.y)*moving.t;
+      ctx.beginPath();
+      ctx.arc(x,y,10,0,Math.PI*2);
+      ctx.fillStyle="#ef4444";
+      ctx.fill();
+      ctx.strokeStyle="rgba(239,68,68,.25)";
+      ctx.lineWidth=8;
+      ctx.stroke();
+    }
+
+    ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+  }
+
+  function topTargets(i,k){
+    return P[i].map((p,j)=>({p,j})).sort((a,b)=>b.p-a.p).slice(0,k).map(o=>o.j);
+  }
+
+  function recommendationVector(){
+    const mode=modeSelect.value;
+    if(mode==="one") return P[current].slice();
+    if(mode==="stationary") return stationary();
+    return nextDist(dist);
+  }
+
+  function renderRecs(){
+    const v=recommendationVector();
+    const arr=v.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p);
+    recList.innerHTML=arr.map((o,rank)=>{
+      const isCur=o.i===current;
+      return `<div class="rec-card">
+        <div class="rec-head"><span>${rank+1}. ${icons[o.i]} ${states[o.i]} ${isCur?"（当前）":""}</span><span>${(o.p*100).toFixed(1)}%</span></div>
+        <div class="bar-bg"><div class="bar" style="width:${Math.max(2,o.p*100)}%"></div></div>
+        <div class="rec-note">${modeText()}</div>
+      </div>`;
+    }).join("");
+    const top=arr[0];
+    topValue.textContent=states[top.i];
+    probValue.textContent=(top.p*100).toFixed(1)+"%";
+  }
+
+  function modeText(){
+    const m=modeSelect.value;
+    if(m==="one") return "依据当前状态所在行的转移概率";
+    if(m==="multi") return "依据当前兴趣分布的一步预测";
+    return "依据马尔可夫链的长期稳定分布";
+  }
+
+  function renderPath(){
+    const last=path.slice(-20);
+    pathBox.innerHTML=last.map((idx,i)=>`<span class="chip ${i===last.length-1?'now':''}">${icons[idx]} ${states[idx]}</span>`).join("");
+    pathLenValue.textContent=path.length;
+  }
+
+  function updateStats(){
+    const steady=stationary();
+    const max=steady.map((p,i)=>({p,i})).sort((a,b)=>b.p-a.p)[0];
+    currentValue.textContent=states[current];
+    stepValue.textContent=steps;
+    steadyValue.textContent=states[max.i];
+    speedBox.textContent=["极慢","慢","中","快","极快"][+speedRange.value-1];
+    batchBox.textContent=batchRange.value;
+  }
+
+  function updateAll(){
+    updateStats(); renderRecs(); renderPath(); drawGraph();
+  }
+
+  function animateMove(from,to,after){
+    moving={from,to,t:0};
+    const start=performance.now();
+    function frame(now){
+      const u=Math.min(1,(now-start)/550);
+      moving.t=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+      drawGraph();
+      if(u<1) requestAnimationFrame(frame);
+      else{moving=null; after(); drawGraph();}
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function step(){
+    const from=current;
+    const to=choose(P[current]);
+    animateMove(from,to,()=>{
+      current=to;
+      steps++;
+      path.push(current);
+      dist=nextDist(dist);
+      updateAll();
+    });
+  }
+
+  function batch(n){
+    for(let k=0;k<n;k++){
+      current=choose(P[current]);
+      steps++;
+      path.push(current);
+      dist=nextDist(dist);
+    }
+    updateAll();
+  }
+
+  function reset(keepCurrent=false){
+    pause();
+    current=keepCurrent?current:+startSelect.value;
+    steps=0;
+    path=[current];
+    dist=Array(states.length).fill(0);
+    dist[current]=1;
+    moving=null;
+    updateAll();
+  }
+
+  function play(){
+    pause();
+    timer=setInterval(()=>{ if(!moving) step(); }, [1200,850,560,320,150][+speedRange.value-1]);
+  }
+
+  function pause(){
+    if(timer){clearInterval(timer); timer=null;}
+  }
+
+  playBtn.onclick=play;
+  pauseBtn.onclick=pause;
+  stepBtn.onclick=()=>{pause(); if(!moving) step();};
+  resetBtn.onclick=()=>reset(false);
+  batchBtn.onclick=()=>{pause(); batch(+batchRange.value);};
+  presetSelect.onchange=loadPreset;
+  startSelect.onchange=()=>reset(false);
+  modeSelect.onchange=updateAll;
+  speedRange.oninput=()=>{updateStats(); if(timer) play();};
+  batchRange.oninput=updateStats;
+  $("applyMatrixBtn").onclick=applyMatrix;
+  $("normalizeBtn").onclick=()=>{
+    applyMatrix(); normalizeRows(); renderMatrix(); reset(true);
+  };
+  window.addEventListener("resize",drawGraph);
+
+  loadPreset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>中心极限定理标准化动画 修正版</title>
+<style>
+:root{
+  --blue-900:#0f4f86;
+  --blue-800:#145d99;
+  --blue-700:#1c73bd;
+  --blue-600:#1e88e5;
+  --blue-500:#2b91e8;
+  --blue-100:#e8f3ff;
+  --orange:#f28c28;
+  --orange-dark:#d96b00;
+  --green:#57b947;
+  --green-dark:#3d8f32;
+  --gray:#aeb9c6;
+  --gray-dark:#526679;
+  --dark:#1f2d3d;
+  --muted:#6c7a89;
+  --bg:#eef4fa;
+  --card:#ffffff;
+  --line:#dce7f2;
+  --shadow:0 14px 32px rgba(31,77,121,.14);
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+  color:var(--dark);
+  background:
+    radial-gradient(circle at 16% 9%, rgba(69,153,232,.20), transparent 34%),
+    radial-gradient(circle at 88% 84%, rgba(87,185,71,.13), transparent 32%),
+    var(--bg);
+}
+
+.page{
+  width:min(1360px,96vw);
+  margin:0 auto;
+  padding:0 0 30px;
+}
+
+.hero{
+  position:relative;
+  margin:0 0 20px;
+  padding:24px 34px 26px;
+  color:#fff;
+  border-radius:0 0 22px 22px;
+  overflow:hidden;
+  background:linear-gradient(135deg,var(--blue-900),var(--blue-700) 58%,#2389dc);
+  box-shadow:0 12px 28px rgba(20,93,153,.28);
+}
+
+.hero::before,
+.hero::after{
+  content:"";
+  position:absolute;
+  border:3px solid rgba(255,255,255,.18);
+  border-radius:50%;
+  transform:rotate(-9deg);
+}
+
+.hero::before{
+  width:300px;
+  height:82px;
+  right:120px;
+  top:36px;
+}
+
+.hero::after{
+  width:380px;
+  height:108px;
+  right:-50px;
+  top:74px;
+}
+
+.hero h1{
+  position:relative;
+  z-index:1;
+  margin:0 0 10px;
+  font-size:34px;
+  line-height:1.2;
+  font-weight:900;
+  max-width:820px;
+}
+
+.hero p{
+  position:relative;
+  z-index:1;
+  margin:0;
+  font-size:17px;
+  line-height:1.65;
+  opacity:.97;
+  font-weight:650;
+  max-width:880px;
+}
+
+.card{
+  background:rgba(255,255,255,.95);
+  border:1px solid var(--line);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+}
+
+.section{
+  padding:20px;
+}
+
+.section-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 16px;
+  color:var(--blue-900);
+  font-size:22px;
+  font-weight:900;
+}
+
+.section-title::before{
+  content:"";
+  width:7px;
+  height:25px;
+  border-radius:8px;
+  background:var(--blue-600);
+  box-shadow:0 0 0 4px rgba(30,136,229,.08);
+}
+
+.top-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:18px;
+  margin-bottom:18px;
+}
+
+.formula-card{
+  padding:17px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,#fff,#f7fbff);
+  text-align:center;
+}
+
+.formula-title{
+  color:var(--blue-900);
+  font-size:17px;
+  font-weight:900;
+  margin-bottom:8px;
+}
+
+.formula{
+  color:#174f96;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:25px;
+  line-height:1.7;
+}
+
+.frac{
+  display:inline-block;
+  vertical-align:middle;
+  text-align:center;
+  margin:0 4px;
+}
+.frac .top{
+  display:block;
+  padding:0 8px 3px;
+  border-bottom:2px solid #174f96;
+}
+.frac .bottom{
+  display:block;
+  padding:2px 8px 0;
+}
+
+.focus-card{
+  padding:17px;
+  border-radius:18px;
+  border:1px solid #cde5ff;
+  background:#edf6ff;
+  color:var(--blue-800);
+  line-height:1.7;
+  font-weight:850;
+}
+
+.focus-card strong{
+  color:var(--green-dark);
+}
+
+.main-grid{
+  display:grid;
+  grid-template-columns:1fr 1.35fr;
+  gap:18px;
+}
+
+.viz-card{
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  overflow:hidden;
+}
+
+.viz-head{
+  padding:13px 15px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  background:linear-gradient(180deg,#fff,#f8fbff);
+}
+
+.viz-head h3{
+  margin:0;
+  color:var(--blue-900);
+  font-size:18px;
+}
+
+.viz-head span{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:800;
+}
+
+canvas{
+  width:100%;
+  height:360px;
+  display:block;
+  background:#fbfdff;
+}
+
+.n-panel{
+  padding:16px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:#fff;
+  margin-top:18px;
+}
+
+.n-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+
+.n-title{
+  font-size:19px;
+  font-weight:900;
+  color:var(--blue-900);
+}
+
+.n-badge{
+  min-width:100px;
+  text-align:center;
+  padding:8px 12px;
+  border-radius:999px;
+  color:#fff;
+  background:linear-gradient(180deg,var(--blue-600),var(--blue-800));
+  font-weight:900;
+  font-size:19px;
+  font-variant-numeric:tabular-nums;
+}
+
+.n-explain{
+  margin:0 0 13px;
+  color:#526679;
+  font-size:14px;
+  font-weight:800;
+  line-height:1.55;
+}
+
+.transform-row{
+  display:grid;
+  grid-template-columns:1fr auto 1fr auto 1fr;
+  gap:12px;
+  align-items:center;
+}
+
+.transform-box{
+  min-height:116px;
+  border-radius:15px;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,#fff,#f8fbff);
+  position:relative;
+  overflow:hidden;
+  padding:12px;
+}
+
+.transform-box h4{
+  margin:0 0 8px;
+  font-size:14px;
+  color:var(--blue-800);
+}
+
+.dot-area{
+  position:relative;
+  height:66px;
+}
+
+.sample-dot{
+  position:absolute;
+  width:11px;
+  height:11px;
+  border-radius:50%;
+  background:var(--orange);
+  box-shadow:0 0 0 4px rgba(242,140,40,.17);
+  opacity:.95;
+}
+
+.mean-dot{
+  position:absolute;
+  left:50%;
+  top:43px;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 0 7px rgba(87,185,71,.18);
+  transform:translate(-50%,-50%);
+}
+
+.z-dot{
+  position:absolute;
+  left:50%;
+  top:43px;
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  background:var(--blue-500);
+  box-shadow:0 0 0 7px rgba(43,145,232,.18);
+  transform:translate(-50%,-50%);
+}
+
+.arrow{
+  font-size:32px;
+  color:var(--blue-600);
+  animation:arrowMove 1.2s infinite ease-in-out;
+  text-align:center;
+}
+
+@keyframes arrowMove{
+  0%,100%{transform:translateX(0);opacity:.75}
+  50%{transform:translateX(5px);opacity:1}
+}
+
+.comparison{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-top:18px;
+}
+
+.compare-card{
+  padding:13px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:#fff;
+  text-align:center;
+  cursor:pointer;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.compare-card:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 24px rgba(31,77,121,.12);
+}
+
+.compare-card.active{
+  border-color:rgba(30,136,229,.55);
+  box-shadow:0 12px 24px rgba(30,136,229,.16);
+  background:#f3f9ff;
+}
+
+.compare-card h4{
+  margin:0 0 6px;
+  font-size:17px;
+  color:var(--blue-900);
+}
+
+.compare-card p{
+  margin:0;
+  color:var(--muted);
+  line-height:1.45;
+  font-size:12px;
+  font-weight:750;
+}
+
+.control-row{
+  display:grid;
+  grid-template-columns:1.1fr 1.2fr .9fr;
+  gap:14px;
+  margin-top:18px;
+}
+
+.control-card{
+  padding:16px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:#fff;
+}
+
+.control-card h3{
+  margin:0 0 12px;
+  color:var(--blue-900);
+  font-size:17px;
+}
+
+.buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+button{
+  min-height:43px;
+  border:0;
+  border-radius:13px;
+  color:#fff;
+  font-size:15px;
+  font-weight:900;
+  cursor:pointer;
+  transition:transform .18s ease, filter .18s ease;
+}
+
+button:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.04);
+}
+
+.btn-green{background:linear-gradient(180deg,#5fbd42,#3d9930)}
+.btn-muted{background:linear-gradient(180deg,#6e8798,#536c7e)}
+.btn-orange{background:linear-gradient(180deg,#ef8b1a,#cf5f00)}
+.btn-blue{background:linear-gradient(180deg,#176aa9,#0f4f86)}
+
+input[type="range"]{
+  width:100%;
+  accent-color:var(--blue-600);
+}
+
+select{
+  width:100%;
+  padding:12px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fbfdff;
+  color:#24425e;
+  font-weight:850;
+  font-size:15px;
+  outline:none;
+}
+
+.range-labels{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:5px;
+  color:#526679;
+  font-size:13px;
+  font-weight:800;
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  margin-top:18px;
+}
+
+.stat{
+  padding:13px 10px;
+  border-radius:16px;
+  border:1px solid var(--line);
+  background:#fff;
+  text-align:center;
+}
+
+.stat small{
+  display:block;
+  color:#526679;
+  font-weight:850;
+  margin-bottom:5px;
+}
+
+.stat strong{
+  display:block;
+  color:var(--blue-800);
+  font-size:23px;
+  font-variant-numeric:tabular-nums;
+}
+
+.stat em{
+  display:block;
+  margin-top:4px;
+  font-style:normal;
+  color:#738596;
+  font-size:12px;
+  font-weight:700;
+}
+
+.warning{
+  margin-top:18px;
+  padding:14px 16px;
+  border-radius:16px;
+  border:1px solid #cde5ff;
+  background:#edf6ff;
+  color:var(--blue-800);
+  font-weight:900;
+  line-height:1.6;
+  text-align:center;
+}
+
+.legend{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-top:10px;
+  justify-content:center;
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#42576a;
+  font-size:13px;
+  font-weight:850;
+}
+
+.key{
+  width:14px;
+  height:14px;
+  border-radius:4px;
+  display:inline-block;
+  background:var(--blue-500);
+}
+.key.orange{background:var(--orange)}
+.key.green{background:var(--green)}
+.key.line{
+  height:3px;
+  width:24px;
+  border-radius:999px;
+  background:var(--green);
+}
+.key.dash{
+  height:3px;
+  width:24px;
+  border-radius:999px;
+  background:repeating-linear-gradient(90deg,var(--orange),var(--orange) 5px,transparent 5px,transparent 9px);
+}
+
+@media(max-width:1120px){
+  .top-grid,.main-grid,.control-row{grid-template-columns:1fr}
+}
+
+@media(max-width:900px){
+  .comparison,.stats-grid{grid-template-columns:repeat(2,1fr)}
+  .transform-row{grid-template-columns:1fr}
+  .arrow{transform:rotate(90deg)}
+}
+
+@media(max-width:560px){
+  .hero{padding:22px 20px}
+  .hero h1{font-size:27px}
+  .top-grid,.comparison,.stats-grid{grid-template-columns:1fr}
+  canvas{height:310px}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+  <header class="hero">
+    <h1>中心极限定理：标准化样本均值动画</h1>
+    <p>可选择多种原始总体分布，观察标准化样本均值随样本容量 n 增大逐渐趋近标准正态分布 N(0,1)。</p>
+  </header>
+
+  <section class="card section">
+    <h2 class="section-title">标准化后的中心极限定理</h2>
+
+    <div class="top-grid">
+      <div class="formula-card">
+        <div class="formula-title">本动画观察的对象</div>
+        <div class="formula">
+          Zₙ =
+          <span class="frac">
+            <span class="top">X&#772; − μ</span>
+            <span class="bottom">σ / √n</span>
+          </span>
+          &nbsp;→&nbsp; N(0,1)
+        </div>
+      </div>
+    </div>
+
+    <div class="main-grid">
+      <div class="viz-card">
+        <div class="viz-head">
+          <h3>原始总体分布函数图</h3>
+          <span id="sourceLabel">二项分布 B(10,0.3)｜分布律</span>
+        </div>
+        <canvas id="sourceCanvas"></canvas>
+      </div>
+
+      <div class="viz-card">
+        <div class="viz-head">
+          <h3>标准化样本均值 Zₙ 的分布</h3>
+          <span id="meanLabel">当前 n = 1</span>
+        </div>
+        <canvas id="zCanvas"></canvas>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="key orange"></span>原始总体：连续为概率密度函数，离散为分布律</div>
+      <div class="legend-item"><span class="key"></span>Zₙ 直方图</div>
+      <div class="legend-item"><span class="key line"></span>标准正态曲线 N(0,1)</div>
+      <div class="legend-item"><span class="key dash"></span>均值位置</div>
+    </div>
+
+    <div class="comparison">
+      <div class="compare-card active" data-n="1">
+        <h4>n = 1</h4>
+        <p>标准化后仍保留原分布形状。</p>
+      </div>
+      <div class="compare-card" data-n="5">
+        <h4>n = 5</h4>
+        <p>偏态减弱，开始向钟形靠近。</p>
+      </div>
+      <div class="compare-card" data-n="30">
+        <h4>n = 30</h4>
+        <p>明显接近标准正态。</p>
+      </div>
+      <div class="compare-card" data-n="100">
+        <h4>n = 100</h4>
+        <p>基本贴近 N(0,1)。</p>
+      </div>
+    </div>
+
+    <div class="control-row">
+      <div class="control-card">
+        <h3>动画控制</h3>
+        <div class="buttons">
+          <button class="btn-green" id="playBtn">▶ 播放 n 增大</button>
+          <button class="btn-muted" id="pauseBtn">Ⅱ 暂停</button>
+          <button class="btn-orange" id="stepBtn">▶| 下一步 n</button>
+          <button class="btn-blue" id="resetBtn">⟳ 重置</button>
+        </div>
+      </div>
+
+      <div class="control-card">
+        <h3>手动调整样本容量 n</h3>
+        <input id="nRange" type="range" min="1" max="100" value="1">
+        <div class="range-labels">
+          <span>1</span>
+          <span id="nRangeText">当前 n = 1</span>
+          <span>100</span>
+        </div>
+      </div>
+
+      <div class="control-card">
+        <h3>原始总体分布（下拉选择）</h3>
+        <select id="distSelect">
+          <option value="binomial">二项分布 B(10,0.3)</option>
+          <option value="exponential">指数分布 Exp(1)</option>
+          <option value="poisson">泊松分布 Pois(3)</option>
+          <option value="twoPoint">两点分布 P(0)=0.7, P(2)=0.3</option>
+          <option value="discreteUnequal">不等概率离散分布</option>
+          <option value="uniform">均匀分布 U(0,1)</option>
+          <option value="gamma">伽马分布 Gamma(2,1)</option>
+          <option value="bimodal">双峰混合分布</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat">
+        <small>当前样本容量 n</small>
+        <strong id="statN">1</strong>
+        <em>每次求均值使用的样本数</em>
+      </div>
+      <div class="stat">
+        <small>总体均值 μ</small>
+        <strong id="statMu">3.00</strong>
+        <em>用于中心化 X&#772; − μ</em>
+      </div>
+      <div class="stat">
+        <small>总体标准差 σ</small>
+        <strong id="statSigma">1.45</strong>
+        <em>用于标准化</em>
+      </div>
+      <div class="stat">
+        <small>模拟次数</small>
+        <strong id="statM">6000</strong>
+        <em>固定模拟次数，用于比较不同 n</em>
+      </div>
+    </div>
+
+    <div class="warning">
+      注意：标准化以后观察的是“形状是否接近 N(0,1)”，蓝色直方图应围绕 0 展开；n 越大，整体越贴近绿色标准正态曲线。
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const sourceCanvas = document.getElementById("sourceCanvas");
+  const zCanvas = document.getElementById("zCanvas");
+  const sctx = sourceCanvas.getContext("2d");
+  const zctx = zCanvas.getContext("2d");
+
+  const nRange = document.getElementById("nRange");
+  const nRangeText = document.getElementById("nRangeText");
+  const distSelect = document.getElementById("distSelect");
+
+  const sourceLabel = document.getElementById("sourceLabel");
+  const meanLabel = document.getElementById("meanLabel");
+
+  const statN = document.getElementById("statN");
+  const statMu = document.getElementById("statMu");
+  const statSigma = document.getElementById("statSigma");
+  const statM = document.getElementById("statM");
+
+  const playBtn = document.getElementById("playBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  const compareCards = Array.from(document.querySelectorAll(".compare-card"));
+
+  const M = 5000;
+  const sequence = [1,2,5,10,20,30,50,100];
+  let timer = null;
+  let currentN = 1;
+
+  const distNames = {
+    binomial:"二项分布 B(10,0.3)",
+    exponential:"指数分布 Exp(1)",
+    poisson:"泊松分布 Pois(3)",
+    twoPoint:"两点分布 P(0)=0.7, P(2)=0.3",
+    discreteUnequal:"不等概率离散分布",
+    uniform:"均匀分布 U(0,1)",
+    gamma:"伽马分布 Gamma(2,1)",
+    bimodal:"双峰混合分布"
+  };
+
+  function randn(){
+    let u=0, v=0;
+    while(u===0) u=Math.random();
+    while(v===0) v=Math.random();
+    return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+  }
+
+  function sampleOne(){
+    const d = distSelect.value;
+
+    // Binomial(m=10, p=0.3): mean=3, sd=sqrt(2.1)
+    if(d === "binomial"){
+      let x = 0;
+      for(let i=0;i<10;i++){
+        if(Math.random() < 0.3) x++;
+      }
+      return x;
+    }
+
+    if(d === "exponential"){
+      return -Math.log(1-Math.random());
+    }
+
+    // Poisson(lambda=3), Knuth algorithm: mean=3, sd=sqrt(3)
+    if(d === "poisson"){
+      const lambda = 3;
+      const L = Math.exp(-lambda);
+      let k = 0;
+      let p = 1;
+      do{
+        k++;
+        p *= Math.random();
+      }while(p > L);
+      return k - 1;
+    }
+
+    // Two-point distribution: P(X=0)=0.7, P(X=2)=0.3
+    if(d === "twoPoint"){
+      return Math.random() < 0.7 ? 0 : 2;
+    }
+
+    // Unequal discrete distribution: values 0,1,3,6 with probs .1,.2,.5,.2
+    if(d === "discreteUnequal"){
+      const r = Math.random();
+      if(r < 0.10) return 0;
+      if(r < 0.30) return 1;
+      if(r < 0.80) return 3;
+      return 6;
+    }
+
+    if(d === "uniform"){
+      return Math.random();
+    }
+
+    // Gamma(k=2, theta=1): X = Exp(1)+Exp(1), mean=2, sd=sqrt(2)
+    if(d === "gamma"){
+      return -Math.log(1-Math.random()) - Math.log(1-Math.random());
+    }
+
+    if(d === "bimodal"){
+      const center = Math.random() < 0.5 ? -1.2 : 1.2;
+      return center + 0.32 * randn();
+    }
+
+    return Math.random();
+  }
+
+  function theoretical(){
+    const d = distSelect.value;
+
+    if(d === "binomial"){
+      return {mu:10*0.3, sigma:Math.sqrt(10*0.3*0.7), xmin:-0.5, xmax:10.5};
+    }
+
+    if(d === "exponential"){
+      return {mu:1, sigma:1, xmin:0, xmax:6};
+    }
+
+    if(d === "poisson"){
+      return {mu:3, sigma:Math.sqrt(3), xmin:-0.5, xmax:12.5};
+    }
+
+    if(d === "twoPoint"){
+      const mu = 0*0.7 + 2*0.3;
+      const ex2 = 0*0*0.7 + 2*2*0.3;
+      return {mu:mu, sigma:Math.sqrt(ex2 - mu*mu), xmin:-0.5, xmax:2.5};
+    }
+
+    if(d === "discreteUnequal"){
+      const values = [0,1,3,6];
+      const probs = [0.10,0.20,0.50,0.20];
+      let mu = 0, ex2 = 0;
+      for(let i=0;i<values.length;i++){
+        mu += values[i]*probs[i];
+        ex2 += values[i]*values[i]*probs[i];
+      }
+      return {mu:mu, sigma:Math.sqrt(ex2 - mu*mu), xmin:-0.5, xmax:6.5};
+    }
+
+    if(d === "uniform"){
+      return {mu:0.5, sigma:Math.sqrt(1/12), xmin:0, xmax:1};
+    }
+
+    if(d === "gamma"){
+      return {mu:2, sigma:Math.sqrt(2), xmin:0, xmax:9};
+    }
+
+    if(d === "bimodal"){
+      return {mu:0, sigma:Math.sqrt(1.2*1.2 + 0.32*0.32), xmin:-2.5, xmax:2.5};
+    }
+
+    return {mu:0, sigma:1, xmin:-3, xmax:3};
+  }
+
+  function resizeCanvas(canvas){
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+  }
+
+  function clearCanvas(ctx, canvas){
+    const rect = canvas.getBoundingClientRect();
+    ctx.clearRect(0,0,rect.width,rect.height);
+  }
+
+  function drawAxes(ctx, w, h, yTitle){
+    ctx.strokeStyle = "#dce7f2";
+    ctx.lineWidth = 1;
+    for(let i=0;i<=5;i++){
+      const y = 34 + i*(h-78)/5;
+      ctx.beginPath();
+      ctx.moveTo(44,y);
+      ctx.lineTo(w-18,y);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = "#8aa0b5";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(44,h-44);
+    ctx.lineTo(w-18,h-44);
+    ctx.stroke();
+
+    ctx.fillStyle = "#6c7a89";
+    ctx.font = "700 12px Microsoft YaHei";
+    ctx.fillText(yTitle, 14, 24);
+  }
+
+  function normalPdf(x){
+    return Math.exp(-0.5*x*x)/Math.sqrt(2*Math.PI);
+  }
+
+  function sourceType(){
+    const d = distSelect.value;
+    if(d === "uniform" || d === "exponential" || d === "gamma" || d === "bimodal"){
+      return "continuous";
+    }
+    return "discrete";
+  }
+
+  function sourcePdf(x){
+    const d = distSelect.value;
+
+    if(d === "uniform"){
+      return (x >= 0 && x <= 1) ? 1 : 0;
+    }
+
+    if(d === "exponential"){
+      return x >= 0 ? Math.exp(-x) : 0;
+    }
+
+    // Gamma(k=2, theta=1), f(x)=x e^{-x}
+    if(d === "gamma"){
+      return x >= 0 ? x * Math.exp(-x) : 0;
+    }
+
+    if(d === "bimodal"){
+      const sd = 0.32;
+      const n1 = Math.exp(-0.5*Math.pow((x+1.2)/sd,2))/(sd*Math.sqrt(2*Math.PI));
+      const n2 = Math.exp(-0.5*Math.pow((x-1.2)/sd,2))/(sd*Math.sqrt(2*Math.PI));
+      return 0.5*n1 + 0.5*n2;
+    }
+
+    return 0;
+  }
+
+  function factorial(n){
+    let r = 1;
+    for(let i=2;i<=n;i++) r *= i;
+    return r;
+  }
+
+  function combination(n,k){
+    if(k < 0 || k > n) return 0;
+    return factorial(n)/(factorial(k)*factorial(n-k));
+  }
+
+  function sourcePmf(k){
+    const d = distSelect.value;
+
+    if(d === "binomial"){
+      const n = 10, p = 0.3;
+      return combination(n,k) * Math.pow(p,k) * Math.pow(1-p,n-k);
+    }
+
+    if(d === "poisson"){
+      const lambda = 3;
+      return Math.exp(-lambda) * Math.pow(lambda,k) / factorial(k);
+    }
+
+    if(d === "twoPoint"){
+      if(k === 0) return 0.7;
+      if(k === 2) return 0.3;
+      return 0;
+    }
+
+    if(d === "discreteUnequal"){
+      if(k === 0) return 0.10;
+      if(k === 1) return 0.20;
+      if(k === 3) return 0.50;
+      if(k === 6) return 0.20;
+      return 0;
+    }
+
+    return 0;
+  }
+
+  function drawSource(){
+    resizeCanvas(sourceCanvas);
+    const rect = sourceCanvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    clearCanvas(sctx, sourceCanvas);
+
+    const th = theoretical();
+    const type = sourceType();
+
+    if(type === "continuous"){
+      drawAxes(sctx,w,h,"概率密度");
+
+      const plotW = w - 64;
+      const plotH = h - 84;
+
+      let maxY = 0;
+      for(let i=0;i<=500;i++){
+        const x = th.xmin + (th.xmax-th.xmin)*i/500;
+        maxY = Math.max(maxY, sourcePdf(x));
+      }
+      if(maxY <= 0) maxY = 1;
+
+      // light fill under PDF curve
+      const fillGrad = sctx.createLinearGradient(0,40,0,h-44);
+      fillGrad.addColorStop(0,"rgba(242,140,40,.32)");
+      fillGrad.addColorStop(1,"rgba(242,140,40,.06)");
+
+      sctx.beginPath();
+      for(let i=0;i<=500;i++){
+        const xVal = th.xmin + (th.xmax-th.xmin)*i/500;
+        const yVal = sourcePdf(xVal);
+        const x = 44 + (xVal-th.xmin)/(th.xmax-th.xmin)*plotW;
+        const y = h - 44 - yVal/maxY*plotH;
+        if(i === 0) sctx.moveTo(x,y);
+        else sctx.lineTo(x,y);
+      }
+      sctx.lineTo(w-18,h-44);
+      sctx.lineTo(44,h-44);
+      sctx.closePath();
+      sctx.fillStyle = fillGrad;
+      sctx.fill();
+
+      sctx.strokeStyle = "#f28c28";
+      sctx.lineWidth = 3.2;
+      sctx.beginPath();
+      for(let i=0;i<=500;i++){
+        const xVal = th.xmin + (th.xmax-th.xmin)*i/500;
+        const yVal = sourcePdf(xVal);
+        const x = 44 + (xVal-th.xmin)/(th.xmax-th.xmin)*plotW;
+        const y = h - 44 - yVal/maxY*plotH;
+        if(i === 0) sctx.moveTo(x,y);
+        else sctx.lineTo(x,y);
+      }
+      sctx.stroke();
+
+      const mx = 44 + (th.mu-th.xmin)/(th.xmax-th.xmin)*plotW;
+      sctx.strokeStyle = "#57b947";
+      sctx.lineWidth = 2.8;
+      sctx.setLineDash([7,5]);
+      sctx.beginPath();
+      sctx.moveTo(mx,36);
+      sctx.lineTo(mx,h-44);
+      sctx.stroke();
+      sctx.setLineDash([]);
+
+      sctx.fillStyle = "#3d8f32";
+      sctx.font = "900 13px Microsoft YaHei";
+      sctx.fillText("均值 μ", Math.min(mx+6,w-60), 52);
+
+      sctx.fillStyle = "#6c7a89";
+      sctx.font = "700 12px Microsoft YaHei";
+      sctx.fillText(th.xmin.toFixed(1), 44, h-20);
+      sctx.fillText(th.xmax.toFixed(1), w-48, h-20);
+      sctx.fillText("概率密度函数 f(x)", w-140, h-20);
+    }else{
+      drawAxes(sctx,w,h,"概率");
+
+      const plotW = w - 64;
+      const plotH = h - 84;
+
+      let values = [];
+      if(distSelect.value === "binomial"){
+        for(let k=0;k<=10;k++) values.push({k, p:sourcePmf(k)});
+      }else if(distSelect.value === "poisson"){
+        for(let k=0;k<=12;k++) values.push({k, p:sourcePmf(k)});
+      }else if(distSelect.value === "twoPoint"){
+        [0,2].forEach(k => values.push({k, p:sourcePmf(k)}));
+      }else if(distSelect.value === "discreteUnequal"){
+        [0,1,3,6].forEach(k => values.push({k, p:sourcePmf(k)}));
+      }
+
+      const maxP = Math.max(...values.map(v=>v.p), 1e-6);
+      const kMin = values[0].k;
+      const kMax = values[values.length-1].k;
+      const barGap = plotW / values.length;
+      const barW = Math.min(34, barGap * 0.62);
+
+      values.forEach(v=>{
+        const xCenter = 44 + (v.k-kMin)/(kMax-kMin || 1)*plotW;
+        const bh = v.p/maxP*plotH;
+        const x = xCenter - barW/2;
+        const y = h - 44 - bh;
+
+        const grad = sctx.createLinearGradient(0,y,0,h-44);
+        grad.addColorStop(0,"rgba(242,140,40,.96)");
+        grad.addColorStop(1,"rgba(242,140,40,.38)");
+        sctx.fillStyle = grad;
+        sctx.fillRect(x,y,barW,bh);
+
+        sctx.fillStyle = "#526679";
+        sctx.font = "800 11px Microsoft YaHei";
+        sctx.fillText(String(v.k), xCenter-4, h-20);
+      });
+
+      const mx = 44 + (th.mu-kMin)/(kMax-kMin || 1)*plotW;
+      sctx.strokeStyle = "#57b947";
+      sctx.lineWidth = 2.8;
+      sctx.setLineDash([7,5]);
+      sctx.beginPath();
+      sctx.moveTo(mx,36);
+      sctx.lineTo(mx,h-44);
+      sctx.stroke();
+      sctx.setLineDash([]);
+
+      sctx.fillStyle = "#3d8f32";
+      sctx.font = "900 13px Microsoft YaHei";
+      sctx.fillText("均值 μ", Math.min(mx+6,w-60), 52);
+
+      sctx.fillStyle = "#6c7a89";
+      sctx.font = "700 12px Microsoft YaHei";
+      sctx.fillText("分布律 P(X=x)", w-122, h-20);
+    }
+  }
+
+  function simulateZ(n){
+    const th = theoretical();
+    const arr = [];
+    for(let i=0;i<M;i++){
+      let sum = 0;
+      for(let j=0;j<n;j++){
+        sum += sampleOne();
+      }
+      const xbar = sum/n;
+      const z = (xbar - th.mu) / (th.sigma / Math.sqrt(n));
+      arr.push(z);
+    }
+    return arr;
+  }
+
+  function drawZ(n){
+    resizeCanvas(zCanvas);
+    const rect = zCanvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    clearCanvas(zctx, zCanvas);
+
+    const values = simulateZ(n);
+    const xmin = -4;
+    const xmax = 4;
+    const bins = 54;
+    const counts = Array(bins).fill(0);
+
+    values.forEach(v=>{
+      if(v < xmin || v > xmax) return;
+      const idx = Math.max(0, Math.min(bins-1, Math.floor((v-xmin)/(xmax-xmin)*bins)));
+      counts[idx]++;
+    });
+
+    const maxC = Math.max(1,...counts);
+    drawAxes(zctx,w,h,"频数");
+
+    const plotW = w - 64;
+    const plotH = h - 84;
+    const barW = plotW / bins;
+
+    counts.forEach((c,i)=>{
+      const bh = c / maxC * plotH;
+      const x = 44 + i*barW;
+      const y = h - 44 - bh;
+      const grad = zctx.createLinearGradient(0,y,0,h-44);
+      grad.addColorStop(0,"rgba(43,145,232,.96)");
+      grad.addColorStop(1,"rgba(43,145,232,.35)");
+      zctx.fillStyle = grad;
+      zctx.fillRect(x+1,y,Math.max(1,barW-2),bh);
+    });
+
+    // 标准正态曲线 N(0,1)
+    const binWidth = (xmax-xmin)/bins;
+    const curveMax = normalPdf(0) * M * binWidth;
+    const scale = curveMax === 0 ? 0 : plotH * .88 / curveMax;
+
+    zctx.strokeStyle = "#57b947";
+    zctx.lineWidth = 3.4;
+    zctx.beginPath();
+    for(let i=0;i<=300;i++){
+      const z = xmin + (xmax-xmin)*i/300;
+      const expected = normalPdf(z) * M * binWidth;
+      const x = 44 + (z-xmin)/(xmax-xmin)*plotW;
+      const y = h - 44 - expected*scale;
+      if(i===0) zctx.moveTo(x,y);
+      else zctx.lineTo(x,y);
+    }
+    zctx.stroke();
+
+    // z=0 line
+    const zx = 44 + (0-xmin)/(xmax-xmin)*plotW;
+    zctx.strokeStyle = "#f28c28";
+    zctx.lineWidth = 2.3;
+    zctx.setLineDash([6,5]);
+    zctx.beginPath();
+    zctx.moveTo(zx,36);
+    zctx.lineTo(zx,h-44);
+    zctx.stroke();
+    zctx.setLineDash([]);
+
+    zctx.fillStyle = "#3d8f32";
+    zctx.font = "900 13px Microsoft YaHei";
+    zctx.fillText("标准正态曲线 N(0,1)", w-160, 46);
+
+    zctx.fillStyle = "#d96b00";
+    zctx.font = "900 13px Microsoft YaHei";
+    zctx.fillText("0", zx+6, 64);
+
+    zctx.fillStyle = "#6c7a89";
+    zctx.font = "700 12px Microsoft YaHei";
+    for(let t=-4;t<=4;t+=2){
+      const x = 44 + (t-xmin)/(xmax-xmin)*plotW;
+      zctx.fillText(String(t), x-4, h-20);
+    }
+  }
+
+  function updateText(n){
+    currentN = n;
+    nRange.value = n;
+    nRangeText.textContent = "当前 n = " + n;
+    meanLabel.textContent = "当前 n = " + n;
+    sourceLabel.textContent = distNames[distSelect.value] + (sourceType() === "continuous" ? "｜概率密度函数" : "｜分布律");
+
+    const th = theoretical();
+    statN.textContent = n;
+    statMu.textContent = th.mu.toFixed(2);
+    statSigma.textContent = th.sigma.toFixed(2);
+    statM.textContent = M;
+
+    compareCards.forEach(card=>{
+      card.classList.toggle("active", Number(card.dataset.n) === n);
+    });
+  }
+
+  function render(n){
+    updateText(n);
+    drawSource();
+    drawZ(n);
+  }
+
+  function nextN(){
+    let idx = sequence.findIndex(v=>v>currentN);
+    if(idx < 0){
+      idx = 0;
+    }
+    render(sequence[idx]);
+  }
+
+  function play(){
+    pause();
+    let idx = sequence.findIndex(v=>v>=currentN);
+    if(idx < 0) idx = 0;
+
+    timer = setInterval(()=>{
+      if(idx >= sequence.length){
+        pause();
+        return;
+      }
+      render(sequence[idx]);
+      idx++;
+    }, 1300);
+  }
+
+  function pause(){
+    if(timer){
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  playBtn.addEventListener("click", play);
+  pauseBtn.addEventListener("click", pause);
+  stepBtn.addEventListener("click", ()=>{
+    pause();
+    nextN();
+  });
+  resetBtn.addEventListener("click", ()=>{
+    pause();
+    render(1);
+  });
+
+  nRange.addEventListener("input", ()=>{
+    pause();
+    render(Number(nRange.value));
+  });
+
+  distSelect.addEventListener("change", ()=>{
+    pause();
+    render(currentN);
+  });
+
+  compareCards.forEach(card=>{
+    card.addEventListener("click", ()=>{
+      pause();
+      render(Number(card.dataset.n));
+    });
+  });
+
+  window.addEventListener("resize", ()=>{
+    render(currentN);
+  });
+
+  render(1);
+})();
+</script>
+</body>
+</html>

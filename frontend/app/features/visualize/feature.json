@@ -1,0 +1,10 @@
+{
+  "id": "visualize",
+  "dir": "visualize",
+  "title": "分布可视化",
+  "icon": "📊",
+  "route": "visualize",
+  "group": "学习",
+  "order": 30,
+  "subtitle": "SymPy 符号推导 · 交互式 PDF/CDF · Agent 解读"
+}

@@ -1,0 +1,127 @@
+/** 知识点讲解页专属样式 */
+
+/* 左：目录 + 右：运行面板 的两栏布局 */
+.kb-layout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.kb-side {
+  position: sticky;
+  top: calc(var(--topbar-h) + 12px);
+  max-height: calc(100vh - var(--topbar-h) - 40px);
+  overflow-y: auto;
+}
+.kb-meta {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.kb-chapter-box + .kb-chapter-box {
+  margin-top: 4px;
+}
+
+/* 章节标题按钮 */
+.kb-chapter {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  transition: var(--transition);
+}
+.kb-chapter:hover {
+  background: var(--primary-light);
+}
+.kb-chapter::before {
+  content: '▸';
+  color: var(--text-3);
+  font-size: 10px;
+  transition: transform 0.16s;
+}
+.kb-chapter.open::before {
+  transform: rotate(90deg);
+}
+.kb-ch-id {
+  /* 已提升到 styles/components.css（工作台也用） */
+}
+.kb-ch-title {
+  flex: 1;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.kb-ch-count {
+  font-size: 11px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+/* 小节按钮 */
+.kb-sections {
+  padding: 2px 0 4px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.kb-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 9px;
+  border: 0;
+  border-left: 2px solid var(--border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: var(--transition);
+}
+.kb-section:hover {
+  background: #f8fafc;
+  border-left-color: var(--primary);
+}
+.kb-sec-title {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.kb-section:hover .kb-sec-title {
+  color: var(--primary-dark);
+}
+.kb-sec-formula {
+  font-size: 10.5px;
+  color: var(--text-3);
+  background: #f1f5f9;
+  border-radius: 3px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.knowledge-tip {
+  border-left: 3px solid var(--primary);
+}
+
+@media (max-width: 1000px) {
+  .kb-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kb-side {
+    position: static;
+    max-height: none;
+  }
+}

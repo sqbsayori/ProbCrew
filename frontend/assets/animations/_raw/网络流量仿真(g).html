@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>网络流量仿真 H5 动画</title>
+<style>
+:root{
+  --bg:#eef4fa;--card:#fff;--line:#dce7f2;--text:#1f2d3d;--muted:#6c7a89;
+  --b900:#0f4f86;--b800:#145d99;--b700:#1c73bd;--b600:#1e88e5;--b500:#2b91e8;
+  --orange:#f28c28;--od:#d96b00;--green:#57b947;--gd:#3d8f32;--red:#ef4444;--gray:#aeb9c6;
+  --shadow:0 14px 32px rgba(31,77,121,.14)
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 15% 8%,rgba(69,153,232,.22),transparent 34%),
+    radial-gradient(circle at 88% 86%,rgba(87,185,71,.13),transparent 30%),
+    var(--bg)
+}
+.page{width:min(1380px,96vw);margin:auto;padding-bottom:30px}
+.hero{
+  position:relative;margin-bottom:20px;padding:24px 34px;color:white;border-radius:0 0 22px 22px;overflow:hidden;
+  background:linear-gradient(135deg,var(--b900),var(--b700) 58%,#2389dc);
+  box-shadow:0 12px 28px rgba(20,93,153,.28)
+}
+.hero:before,.hero:after{
+  content:"";position:absolute;border:3px solid rgba(255,255,255,.18);border-radius:50%;transform:rotate(-9deg)
+}
+.hero:before{width:300px;height:82px;right:120px;top:36px}
+.hero:after{width:380px;height:108px;right:-50px;top:74px}
+.hero h1{position:relative;z-index:1;margin:0 0 10px;font-size:34px;font-weight:900}
+.hero p{position:relative;z-index:1;margin:0;font-size:17px;line-height:1.65;font-weight:650;max-width:960px}
+
+.layout{display:grid;grid-template-columns:1fr 410px;gap:20px}
+.card{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+.section{padding:20px}
+.title{display:flex;align-items:center;gap:10px;margin:0 0 16px;color:var(--b900);font-size:22px;font-weight:900}
+.title:before{content:"";width:7px;height:25px;border-radius:8px;background:var(--b600);box-shadow:0 0 0 4px rgba(30,136,229,.08)}
+
+.top{display:grid;grid-template-columns:1.08fr .92fr;gap:16px;margin-bottom:16px}
+.formula,.tip{padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,#fff,#f7fbff)}
+.formula{text-align:center}.formula h3{margin:0 0 8px;color:var(--b900);font-size:17px}
+.math{font-family:Georgia,"Times New Roman",serif;color:#174f96;font-size:22px;line-height:1.75}.math sub{font-size:70%;vertical-align:-.25em}
+.tip{background:#edf6ff;border-color:#cde5ff;color:var(--b900);font-weight:850;line-height:1.65}
+
+.net-card{border:1px solid var(--line);border-radius:18px;background:#fff;overflow:hidden}
+.nhead{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;background:linear-gradient(180deg,#fff,#f8fbff)}
+.nhead h3{margin:0;color:var(--b900);font-size:18px}.nhead span{color:var(--muted);font-size:13px;font-weight:800}
+.stage{
+  position:relative;height:470px;background:
+  linear-gradient(180deg,#fbfdff,#f7fbff),
+  repeating-linear-gradient(0deg,transparent,transparent 23px,rgba(31,77,121,.035) 24px),
+  repeating-linear-gradient(90deg,transparent,transparent 23px,rgba(31,77,121,.035) 24px);
+  overflow:hidden
+}
+.backbone{position:absolute;left:60px;right:60px;top:225px;height:6px;border-radius:999px;background:linear-gradient(90deg,#c2d3e2,#dce7f2,#c2d3e2)}
+.device{position:absolute;text-align:center;z-index:3}
+.device .circle{width:88px;height:88px;border-radius:50%;border:4px solid #dce7f2;background:#fff;display:grid;place-items:center;box-shadow:0 12px 24px rgba(31,77,121,.12)}
+.device h4{margin:7px 0 0;color:var(--b900);font-size:14px}
+.src1{left:40px;top:55px}.src2{left:40px;top:185px}.src3{left:40px;top:315px}
+.router{left:50%;top:164px;transform:translateX(-50%)}.server{right:45px;top:164px}
+.src1 .circle,.src2 .circle,.src3 .circle{border-color:rgba(242,140,40,.45);background:#fff8ed}
+.router .circle{width:118px;height:118px;border-color:rgba(43,145,232,.45);background:#edf6ff}
+.server .circle{width:108px;height:108px;border-color:rgba(87,185,71,.45);background:#f3fff0}
+.icon{font-size:40px}.src1 .icon,.src2 .icon,.src3 .icon{color:var(--orange)}.router .icon{color:var(--b600)}.server .icon{color:var(--green)}
+.buffer{
+  position:absolute;left:calc(50% - 190px);right:calc(50% + 75px);bottom:50px;height:112px;border:2px dashed #bdd6ee;border-radius:18px;background:rgba(237,246,255,.55)
+}
+.buffer .label{position:absolute;left:14px;top:-13px;background:#2b91e8;color:white;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:900}
+.output-link{
+  position:absolute;left:calc(50% + 78px);right:170px;top:225px;height:6px;border-radius:999px;background:linear-gradient(90deg,#2b91e8,#57b947)
+}
+.link-label{position:absolute;left:calc(50% + 120px);top:238px;color:#526679;font-size:12px;font-weight:900}
+.packet{
+  position:absolute;width:34px;height:23px;border-radius:9px;background:linear-gradient(180deg,#4aa4ee,#176aa9);
+  color:white;font-size:11px;font-weight:900;display:grid;place-items:center;
+  box-shadow:0 8px 14px rgba(31,77,121,.22),0 0 0 5px rgba(43,145,232,.12);
+  z-index:10;transition:left .45s cubic-bezier(.2,.8,.2,1),top .45s cubic-bezier(.2,.8,.2,1),opacity .3s,transform .25s,background .25s
+}
+.packet.queue{background:linear-gradient(180deg,#f59e3f,#cf5f00);box-shadow:0 8px 14px rgba(207,95,0,.18),0 0 0 5px rgba(242,140,40,.14)}
+.packet.tx{background:linear-gradient(180deg,#62c34f,#3d9930)}
+.packet.drop{background:linear-gradient(180deg,#ff7070,#ef4444);transform:rotate(-18deg) scale(.85);opacity:.25}
+.clock{
+  position:absolute;left:22px;top:20px;padding:10px 14px;border-radius:14px;background:#fff;border:1px solid var(--line);box-shadow:0 8px 16px rgba(31,77,121,.08);font-weight:900;color:var(--b900)
+}
+.event-log{
+  position:absolute;right:18px;top:18px;width:330px;max-width:39%;padding:12px;border-radius:14px;background:rgba(255,255,255,.92);border:1px solid var(--line);box-shadow:0 8px 16px rgba(31,77,121,.08)
+}
+.event-log h4{margin:0 0 7px;color:var(--b900);font-size:14px}
+.log-line{font-size:12px;color:#526679;line-height:1.55;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.status{
+  position:absolute;left:22px;bottom:18px;right:22px;padding:11px 14px;border-radius:13px;background:#edf6ff;border:1px solid #cde5ff;color:var(--b900);font-weight:900;text-align:center
+}
+
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.chart-card{padding:14px;border:1px solid var(--line);border-radius:17px;background:#fff}
+.chart-card h3{margin:0 0 10px;color:var(--b900);font-size:17px}
+canvas.chart{height:180px;background:#fbfdff;border-radius:12px;border:1px solid #edf3f9;width:100%}
+
+.info{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.ibox{padding:14px;border:1px solid var(--line);border-radius:15px;background:white}
+.ibox h3{margin:0 0 6px;font-size:16px}.ibox p{margin:0;color:#647487;font-size:13px;line-height:1.55;font-weight:700}
+.o h3{color:var(--od)}.bl h3{color:var(--b700)}.g h3{color:var(--gd)}.r h3{color:var(--red)}
+
+.control{padding:20px}
+.buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+button{min-height:47px;border:0;border-radius:13px;color:white;font-size:16px;font-weight:900;cursor:pointer;transition:.18s}
+button:hover{transform:translateY(-1px);filter:brightness(1.04)}
+.bg{background:linear-gradient(180deg,#5fbd42,#3d9930)}.bm{background:linear-gradient(180deg,#6e8798,#536c7e)}.bo{background:linear-gradient(180deg,#ef8b1a,#cf5f00)}.bb{background:linear-gradient(180deg,#176aa9,#0f4f86)}
+.block{padding:15px 0;border-top:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px;font-weight:900}
+.vbox{min-width:90px;text-align:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:#f9fcff;color:#24425e;font-weight:900;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--b600)}
+select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#fbfdff;color:#24425e;font-size:15px;font-weight:850}
+.rlabels{display:flex;justify-content:space-between;color:#526679;font-size:13px;font-weight:800;margin-top:4px}
+
+.stats{margin-top:15px;padding:14px;border:1px dashed #b9d5ee;border-radius:14px;background:#fbfdff}
+.stats h3{margin:0 0 12px;color:var(--b900)}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{padding:11px 8px;text-align:center;border-radius:12px;background:#f5f9fd;border:1px solid #e0edf8}
+.stat small{display:block;color:#526679;font-weight:800;margin-bottom:4px}
+.stat strong{font-size:21px;font-variant-numeric:tabular-nums}
+.stat em{display:block;margin-top:3px;color:#738596;font-size:12px;font-style:normal;font-weight:700}
+
+.note{margin-top:14px;padding:13px;border-radius:13px;background:#edf6ff;border:1px solid #cde5ff;color:var(--b900);font-weight:850;line-height:1.6}
+@media(max-width:1180px){.layout{grid-template-columns:1fr}.top{grid-template-columns:1fr}.event-log{max-width:46%}}
+@media(max-width:860px){.info,.chart-row{grid-template-columns:1fr 1fr}.event-log{display:none}.buffer{left:190px;right:calc(50% + 70px)}}
+@media(max-width:620px){.hero{padding:22px 20px}.hero h1{font-size:27px}.buttons,.info,.chart-row{grid-template-columns:1fr}.stage{height:500px}.device .circle{width:70px;height:70px}.router .circle,.server .circle{width:84px;height:84px}.src1,.src2,.src3{left:18px}.server{right:20px}.buffer{left:100px;right:190px}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero">
+  <h1>网络流量仿真 H5 动画</h1>
+  <p>模拟终端产生数据包，经路由器缓冲队列转发到服务器的过程，观察吞吐量、时延、丢包率和链路利用率如何随流量负载变化。</p>
+</header>
+
+<main class="layout">
+<section>
+<div class="card section">
+<h2 class="title">网络传输演示区</h2>
+
+<div class="top">
+  <div class="formula">
+    <h3>简化排队模型</h3>
+    <div class="math">
+      业务强度 ρ = λ / C<br>
+      丢包率 = 丢弃包数 / 到达包数，吞吐量 = 成功转发包数 / 时间
+    </div>
+  </div>
+  <div class="tip">
+    数据包随机到达路由器。若输出链路空闲则发送，否则进入缓冲队列；若缓冲区已满，则发生丢包。链路带宽越小或到达率越高，队列和时延越容易增大。
+  </div>
+</div>
+
+<div class="net-card">
+  <div class="nhead"><h3>网络流量动画</h3><span id="stateLabel">等待开始</span></div>
+  <div class="stage" id="stage">
+    <div class="clock" id="clockBox">t = 0.00</div>
+    <div class="event-log"><h4>事件记录</h4><div id="logBox"></div></div>
+    <div class="backbone"></div>
+    <div class="output-link"></div>
+    <div class="link-label" id="linkLabel">输出链路 C</div>
+    <div class="device src1"><div class="circle"><div class="icon">📱</div></div><h4>终端 A</h4></div>
+    <div class="device src2"><div class="circle"><div class="icon">💻</div></div><h4>终端 B</h4></div>
+    <div class="device src3"><div class="circle"><div class="icon">📡</div></div><h4>终端 C</h4></div>
+    <div class="device router"><div class="circle"><div class="icon">🔀</div></div><h4>路由器</h4></div>
+    <div class="device server"><div class="circle"><div class="icon">🖥</div></div><h4>服务器</h4></div>
+    <div class="buffer"><div class="label" id="bufferLabel">缓冲队列</div></div>
+    <div class="status" id="statusBox">点击“开始动画”观察网络数据包传输。</div>
+  </div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-card"><h3>缓冲队列长度 Q(t)</h3><canvas class="chart" id="qChart"></canvas></div>
+  <div class="chart-card"><h3>吞吐量与丢包率</h3><canvas class="chart" id="rateChart"></canvas></div>
+</div>
+</div>
+
+<div class="info">
+  <div class="ibox o"><h3>1. 数据包到达</h3><p>终端按设定流量模型产生数据包，可以是平稳流量，也可以是突发流量。</p></div>
+  <div class="ibox bl"><h3>2. 缓冲排队</h3><p>当输出链路忙时，数据包先进入路由器缓冲区等待。</p></div>
+  <div class="ibox g"><h3>3. 链路转发</h3><p>路由器按链路带宽 C 发送数据包，发送完成后到达服务器。</p></div>
+  <div class="ibox r"><h3>4. 拥塞丢包</h3><p>若缓冲区满，后续到达的数据包被丢弃，产生丢包率。</p></div>
+</div>
+</section>
+
+<aside class="card control">
+<h2 class="title">仿真控制</h2>
+<div class="buttons">
+  <button class="bg" id="playBtn">▶ 开始仿真</button>
+  <button class="bm" id="pauseBtn">Ⅱ 暂停</button>
+  <button class="bo" id="stepBtn">▶| 单步事件</button>
+  <button class="bb" id="resetBtn">⟳ 重置</button>
+</div>
+
+<div class="block">
+  <div class="row"><span>流量模型</span></div>
+  <select id="trafficSelect">
+    <option value="poisson">泊松到达流量</option>
+    <option value="bursty">突发流量</option>
+    <option value="constant">近似恒定流量</option>
+  </select>
+</div>
+
+<div class="block">
+  <div class="row"><span>平均到达率 λ</span><span class="vbox" id="lambdaBox">1.00</span></div>
+  <input id="lambdaRange" type="range" min="0.2" max="4" step="0.05" value="1.0">
+  <div class="rlabels"><span>低</span><span>包/单位时间</span><span>高</span></div>
+</div>
+
+<div class="block">
+  <div class="row"><span>链路带宽 C</span><span class="vbox" id="capBox">1.50</span></div>
+  <input id="capRange" type="range" min="0.3" max="4.5" step="0.05" value="1.5">
+  <div class="rlabels"><span>窄</span><span>服务能力</span><span>宽</span></div>
+</div>
+
+<div class="block">
+  <div class="row"><span>缓冲区容量</span><span class="vbox" id="bufBox">8 包</span></div>
+  <input id="bufRange" type="range" min="1" max="20" step="1" value="8">
+</div>
+
+<div class="block">
+  <div class="row"><span>动画速度</span><span class="vbox" id="speedBox">中</span></div>
+  <input id="speedRange" type="range" min="1" max="5" value="3">
+  <div class="rlabels"><span>慢</span><span>中</span><span>快</span></div>
+</div>
+
+<div class="block">
+  <div class="row"><span>批量事件</span><span class="vbox" id="batchBox">50</span></div>
+  <input id="batchRange" type="range" min="10" max="500" step="10" value="50">
+  <button class="bb" id="batchBtn" style="width:100%;margin-top:12px">＋ 批量运行</button>
+</div>
+
+<div class="stats">
+  <h3>当前指标</h3>
+  <div class="sgrid">
+    <div class="stat"><small>业务强度 ρ</small><strong id="rhoValue">0.67</strong><em>ρ=λ/C</em></div>
+    <div class="stat"><small>队列长度</small><strong id="qValue">0</strong><em>缓冲区中包数</em></div>
+    <div class="stat"><small>到达包数</small><strong id="arrValue">0</strong><em>进入网络</em></div>
+    <div class="stat"><small>成功转发</small><strong id="txValue">0</strong><em>到达服务器</em></div>
+    <div class="stat"><small>丢包率</small><strong id="lossValue">0.0%</strong><em>拥塞损失</em></div>
+    <div class="stat"><small>平均时延</small><strong id="delayValue">--</strong><em>进入路由器到离开</em></div>
+    <div class="stat"><small>吞吐量</small><strong id="thrValue">0.00</strong><em>包/单位时间</em></div>
+    <div class="stat"><small>链路状态</small><strong id="linkState">空闲</strong><em>忙/闲</em></div>
+  </div>
+</div>
+
+<div class="note" id="noteBox">
+  教学提示：当 ρ 接近或超过 1 时，输出链路成为瓶颈，队列长度、时延和丢包率会快速上升。
+</div>
+</aside>
+</main>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const stage=$("stage"), playBtn=$("playBtn"), pauseBtn=$("pauseBtn"), stepBtn=$("stepBtn"), resetBtn=$("resetBtn"), batchBtn=$("batchBtn");
+  const trafficSelect=$("trafficSelect"), lambdaRange=$("lambdaRange"), capRange=$("capRange"), bufRange=$("bufRange"), speedRange=$("speedRange"), batchRange=$("batchRange");
+  const lambdaBox=$("lambdaBox"), capBox=$("capBox"), bufBox=$("bufBox"), speedBox=$("speedBox"), batchBox=$("batchBox");
+  const rhoValue=$("rhoValue"), qValue=$("qValue"), arrValue=$("arrValue"), txValue=$("txValue"), lossValue=$("lossValue"), delayValue=$("delayValue"), thrValue=$("thrValue"), linkState=$("linkState");
+  const clockBox=$("clockBox"), stateLabel=$("stateLabel"), logBox=$("logBox"), statusBox=$("statusBox"), bufferLabel=$("bufferLabel"), linkLabel=$("linkLabel");
+  const qChart=$("qChart"), rateChart=$("rateChart"), qctx=qChart.getContext("2d"), rctx=rateChart.getContext("2d");
+
+  let t=0, nextArr=0, nextDep=Infinity, idSeq=0;
+  let queue=[], link=null, packets=new Map(), timer=null, logs=[];
+  let arrived=0, dropped=0, transmitted=0, totalDelay=0;
+  let qHistory=[], metricHistory=[];
+  let burstUntil=0;
+
+  function lambda(){return +lambdaRange.value}
+  function capacity(){return +capRange.value}
+  function bufCap(){return +bufRange.value}
+  function expRand(rate){return -Math.log(1-Math.random())/rate}
+  function speedMs(){return [1150,800,520,260,90][+speedRange.value-1]}
+
+  function nextArrivalInterval(){
+    const model=trafficSelect.value, l=lambda();
+    if(model==="constant") return 1/l;
+    if(model==="bursty"){
+      if(t>burstUntil && Math.random()<0.18) burstUntil=t+1.5+Math.random()*2.5;
+      const rate = t<burstUntil ? l*3.2 : Math.max(0.08,l*0.35);
+      return expRand(rate);
+    }
+    return expRand(l);
+  }
+
+  function sourcePos(src){
+    const st=stage.getBoundingClientRect();
+    if(src===0) return {left:84, top:143};
+    if(src===1) return {left:84, top:273};
+    return {left:84, top:403};
+  }
+  function routerPos(){const st=stage.getBoundingClientRect(); return {left:st.width/2-17, top:214}}
+  function bufferPos(i){
+    const zone=document.querySelector(".buffer").getBoundingClientRect();
+    const st=stage.getBoundingClientRect();
+    const cols=Math.max(1,Math.floor((zone.width-28)/42));
+    const col=i%cols,row=Math.floor(i/cols);
+    return {left:zone.left-st.left+18+col*42, top:zone.top-st.top+28+row*36}
+  }
+  function serverPos(){const st=stage.getBoundingClientRect();return {left:st.width-101, top:214}}
+
+  function makePacket(id,src){
+    const el=document.createElement("div");
+    el.className="packet";
+    el.textContent=id;
+    const p=sourcePos(src);
+    el.style.left=p.left+"px"; el.style.top=p.top+"px";
+    stage.appendChild(el);
+    return el;
+  }
+  function move(el,p,cls){
+    if(cls!==undefined) el.className="packet "+cls;
+    el.style.left=p.left+"px"; el.style.top=p.top+"px";
+  }
+
+  function addLog(s){
+    logs.unshift(s);
+    logs=logs.slice(0,6);
+    logBox.innerHTML=logs.map(x=>`<div class="log-line">${x}</div>`).join("");
+  }
+
+  function arrival(){
+    idSeq++; arrived++;
+    const src=Math.floor(Math.random()*3);
+    const p={id:idSeq, arrive:t, el:makePacket(idSeq,src)};
+    packets.set(p.id,p);
+    setTimeout(()=>move(p.el,routerPos(),""),30);
+
+    if(!link){
+      setTimeout(()=>startTx(p),220);
+      addLog(`t=${t.toFixed(2)}：包 ${p.id} 到达，链路空闲，立即发送`);
+    }else if(queue.length < bufCap()){
+      queue.push(p);
+      setTimeout(()=>{move(p.el,bufferPos(queue.indexOf(p)),"queue"); updateQueuePositions();},250);
+      addLog(`t=${t.toFixed(2)}：包 ${p.id} 到达，进入缓冲队列`);
+    }else{
+      dropped++;
+      setTimeout(()=>{move(p.el,routerPos(),"drop"); setTimeout(()=>{if(p.el.parentNode)p.el.remove();packets.delete(p.id);},450)},220);
+      addLog(`t=${t.toFixed(2)}：缓冲区满，包 ${p.id} 被丢弃`);
+    }
+    nextArr=t+nextArrivalInterval();
+  }
+
+  function startTx(p){
+    link=p;
+    move(p.el,routerPos(),"tx");
+    nextDep=t+expRand(capacity());
+    linkState.textContent="忙";
+  }
+
+  function departure(){
+    if(!link) return;
+    const p=link;
+    transmitted++;
+    totalDelay += t - p.arrive;
+    move(p.el,serverPos(),"tx");
+    setTimeout(()=>{if(p.el && p.el.parentNode)p.el.remove();packets.delete(p.id);},650);
+    addLog(`t=${t.toFixed(2)}：包 ${p.id} 转发完成，到达服务器`);
+    link=null;
+    if(queue.length>0){
+      const next=queue.shift();
+      updateQueuePositions();
+      startTx(next);
+      addLog(`t=${t.toFixed(2)}：包 ${next.id} 从队列进入输出链路`);
+    }else{
+      nextDep=Infinity;
+      linkState.textContent="空闲";
+    }
+  }
+
+  function updateQueuePositions(){
+    queue.forEach((p,i)=>move(p.el,bufferPos(i),"queue"));
+  }
+
+  function stepEvent(){
+    if(nextArr<=nextDep){
+      t=nextArr; arrival();
+    }else{
+      t=nextDep; departure();
+    }
+    record(); updateUI();
+  }
+
+  function batch(n){for(let i=0;i<n;i++) stepEvent()}
+
+  function record(){
+    qHistory.push({t,q:queue.length});
+    const loss=arrived?dropped/arrived:0;
+    const thr=t>0?transmitted/t:0;
+    metricHistory.push({t,loss,thr});
+    if(qHistory.length>160) qHistory=qHistory.slice(-160);
+    if(metricHistory.length>160) metricHistory=metricHistory.slice(-160);
+  }
+
+  function updateUI(){
+    const l=lambda(), c=capacity(), rho=l/c;
+    lambdaBox.textContent=l.toFixed(2);
+    capBox.textContent=c.toFixed(2);
+    bufBox.textContent=bufCap()+" 包";
+    speedBox.textContent=["极慢","慢","中","快","极快"][+speedRange.value-1];
+    batchBox.textContent=batchRange.value;
+    rhoValue.textContent=rho.toFixed(2);
+    qValue.textContent=queue.length;
+    arrValue.textContent=arrived;
+    txValue.textContent=transmitted;
+    lossValue.textContent=(arrived?dropped/arrived*100:0).toFixed(1)+"%";
+    delayValue.textContent=transmitted? (totalDelay/transmitted).toFixed(3):"--";
+    thrValue.textContent=(t>0?transmitted/t:0).toFixed(2);
+    clockBox.textContent="t = "+t.toFixed(2);
+    stateLabel.textContent=`队列 ${queue.length}/${bufCap()}，链路${link?"忙":"空闲"}`;
+    bufferLabel.textContent=`缓冲队列 ${queue.length}/${bufCap()}`;
+    linkLabel.textContent=`输出链路 C=${c.toFixed(2)}`;
+
+    if(rho<0.75){
+      statusBox.textContent="网络负载较轻：队列较短，时延和丢包率通常较低。";
+      statusBox.style.background="#edf6ff"; statusBox.style.borderColor="#cde5ff"; statusBox.style.color="#145d99";
+    }else if(rho<1){
+      statusBox.textContent="网络负载较高：输出链路接近饱和，队列和时延开始明显上升。";
+      statusBox.style.background="#fff8ed"; statusBox.style.borderColor="#ffe1ba"; statusBox.style.color="#d96b00";
+    }else{
+      statusBox.textContent="拥塞风险：ρ ≥ 1，长期来看队列会积压，缓冲区容易溢出。";
+      statusBox.style.background="#fff0f0"; statusBox.style.borderColor="#ffd2d2"; statusBox.style.color="#ef4444";
+    }
+    drawCharts();
+  }
+
+  function resizeCanvas(c){
+    const r=c.getBoundingClientRect(), q=devicePixelRatio||1;
+    c.width=Math.round(r.width*q); c.height=Math.round(r.height*q);
+    const ctx=c.getContext("2d"); ctx.setTransform(q,0,0,q,0,0);
+    return [r.width,r.height];
+  }
+
+  function axes(ctx,w,h,label){
+    ctx.clearRect(0,0,w,h);
+    ctx.strokeStyle="#dce7f2"; ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){let y=18+i*(h-42)/4;ctx.beginPath();ctx.moveTo(36,y);ctx.lineTo(w-12,y);ctx.stroke();}
+    ctx.strokeStyle="#8aa0b5";ctx.beginPath();ctx.moveTo(36,h-25);ctx.lineTo(w-12,h-25);ctx.stroke();
+    ctx.fillStyle="#6c7a89";ctx.font="700 12px Microsoft YaHei";ctx.fillText(label,8,16);
+  }
+
+  function drawLine(ctx,w,h,data,key,color,maxY){
+    if(data.length<2) return;
+    const minT=data[0].t, maxT=data[data.length-1].t || minT+1;
+    ctx.strokeStyle=color; ctx.lineWidth=2.4; ctx.beginPath();
+    data.forEach((d,i)=>{
+      const x=36+(d.t-minT)/(maxT-minT||1)*(w-48);
+      const y=h-25-d[key]/maxY*(h-48);
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    });
+    ctx.stroke();
+  }
+
+  function drawCharts(){
+    let [w,h]=resizeCanvas(qChart);
+    axes(qctx,w,h,"Q(t)");
+    drawLine(qctx,w,h,qHistory,"q","#2b91e8",Math.max(1,bufCap()));
+
+    [w,h]=resizeCanvas(rateChart);
+    axes(rctx,w,h,"吞吐/丢包");
+    const maxThr=Math.max(1,capacity(),...metricHistory.map(d=>d.thr));
+    drawLine(rctx,w,h,metricHistory,"thr","#57b947",maxThr);
+    drawLine(rctx,w,h,metricHistory,"loss","#ef4444",1);
+    rctx.fillStyle="#526679";rctx.font="700 12px Microsoft YaHei";
+    rctx.fillText("绿：吞吐量",w-100,18);
+    rctx.fillText("红：丢包率",w-100,34);
+  }
+
+  function play(){pause(); timer=setInterval(stepEvent,speedMs())}
+  function pause(){if(timer){clearInterval(timer);timer=null}}
+  function reset(){
+    pause();
+    t=0; nextDep=Infinity; idSeq=0; queue=[]; link=null; arrived=0; dropped=0; transmitted=0; totalDelay=0; logs=[]; qHistory=[]; metricHistory=[]; burstUntil=0;
+    packets.forEach(p=>{if(p.el && p.el.parentNode)p.el.remove()});
+    packets.clear();
+    nextArr=nextArrivalInterval();
+    logBox.innerHTML="";
+    linkState.textContent="空闲";
+    updateUI();
+  }
+
+  playBtn.onclick=play;
+  pauseBtn.onclick=pause;
+  stepBtn.onclick=()=>{pause();stepEvent()};
+  resetBtn.onclick=reset;
+  batchBtn.onclick=()=>{pause();batch(+batchRange.value);updateUI()};
+  trafficSelect.onchange=reset;
+  lambdaRange.oninput=reset;
+  capRange.oninput=reset;
+  bufRange.oninput=reset;
+  speedRange.oninput=()=>{updateUI(); if(timer)play()};
+  batchRange.oninput=updateUI;
+  window.addEventListener("resize",()=>{updateQueuePositions(); if(link)move(link.el,routerPos(),"tx"); drawCharts()});
+
+  reset();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "id": "solver",
+  "dir": "solver",
+  "title": "题目讲解",
+  "icon": "✏️",
+  "route": "solver",
+  "group": "学习",
+  "order": 25,
+  "subtitle": "逐步解题 · 独立校验 · 人机协同确认"
+}

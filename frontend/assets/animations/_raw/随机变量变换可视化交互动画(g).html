@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>随机变量变换可视化动画</title>
+<style>
+:root{
+  --bg:#eef4fa;--card:#fff;--line:#dce7f2;--text:#1f2d3d;--muted:#6c7a89;
+  --b900:#0f4f86;--b700:#1c73bd;--b600:#1e88e5;--b500:#2b91e8;--b050:#f4f9ff;
+  --orange:#f28c28;--od:#d96b00;--green:#57b947;--gd:#3d8f32;--gray:#aeb9c6;
+  --shadow:0 14px 32px rgba(31,77,121,.14)
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;color:var(--text);background:radial-gradient(circle at 15% 8%,rgba(69,153,232,.22),transparent 34%),radial-gradient(circle at 88% 86%,rgba(87,185,71,.13),transparent 30%),var(--bg)}
+.page{width:min(1380px,96vw);margin:auto;padding-bottom:30px}
+.hero{position:relative;margin-bottom:20px;padding:24px 34px;color:white;border-radius:0 0 22px 22px;overflow:hidden;background:linear-gradient(135deg,var(--b900),var(--b700) 58%,#2389dc);box-shadow:0 12px 28px rgba(20,93,153,.28)}
+.hero:before,.hero:after{content:"";position:absolute;border:3px solid rgba(255,255,255,.18);border-radius:50%;transform:rotate(-9deg)}
+.hero:before{width:300px;height:82px;right:120px;top:36px}.hero:after{width:380px;height:108px;right:-50px;top:74px}
+.hero h1{position:relative;z-index:1;margin:0 0 10px;font-size:34px;font-weight:900}.hero p{position:relative;z-index:1;margin:0;font-size:17px;line-height:1.65;font-weight:650;max-width:920px}
+.layout{display:grid;grid-template-columns:1fr 410px;gap:20px}
+.card{background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow)}
+.section{padding:20px}
+.title{display:flex;align-items:center;gap:10px;margin:0 0 16px;color:var(--b900);font-size:22px;font-weight:900}
+.title:before{content:"";width:7px;height:25px;border-radius:8px;background:var(--b600);box-shadow:0 0 0 4px rgba(30,136,229,.08)}
+.top{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-bottom:16px}
+.formula,.tip{padding:16px;border-radius:18px;border:1px solid var(--line);background:linear-gradient(180deg,#fff,#f7fbff)}
+.formula{text-align:center}.formula h3{margin:0 0 8px;color:var(--b900);font-size:17px}.math{font-family:Georgia,serif;color:#174f96;font-size:26px;line-height:1.6}
+.tip{background:#edf6ff;border-color:#cde5ff;color:var(--b900);font-weight:850;line-height:1.65}
+.viz{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.panel{border:1px solid var(--line);border-radius:18px;background:white;overflow:hidden}
+.ph{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;background:linear-gradient(180deg,#fff,#f8fbff)}
+.ph h3{margin:0;color:var(--b900);font-size:17px}.ph span{color:var(--muted);font-size:12px;font-weight:800}
+canvas{width:100%;height:330px;display:block;background:#fbfdff}
+.stage{margin-top:16px;min-height:150px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,#fff,#f8fbff);position:relative;overflow:hidden}
+.stage h3{position:absolute;top:12px;left:16px;margin:0;color:var(--b900);font-size:17px}
+.track{position:absolute;left:40px;right:40px;top:75px;height:48px}.axis{position:absolute;left:0;right:0;top:24px;height:2px;background:linear-gradient(90deg,transparent,var(--gray),transparent)}
+.dot{position:absolute;top:24px;width:18px;height:18px;border-radius:50%;background:var(--orange);box-shadow:0 0 0 6px rgba(242,140,40,.18);transform:translate(-50%,-50%);opacity:0;transition:left .65s cubic-bezier(.2,.8,.2,1),background .25s,box-shadow .25s,opacity .2s}
+.dot.show{opacity:1}.dot.y{background:var(--green);box-shadow:0 0 0 6px rgba(87,185,71,.18)}
+.dotlabel{position:absolute;top:42px;left:0;transform:translateX(-50%);font-size:13px;color:#526679;font-weight:900;white-space:nowrap}.arrow{position:absolute;left:50%;top:12px;transform:translateX(-50%);color:var(--b600);font-size:30px;font-weight:900}
+.info{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}.ibox{padding:14px;border:1px solid var(--line);border-radius:15px;background:white}.ibox h3{margin:0 0 6px;font-size:16px}.ibox p{margin:0;color:#647487;font-size:13px;line-height:1.55;font-weight:700}.o h3{color:var(--od)}.bl h3{color:var(--b700)}.g h3{color:var(--gd)}.gr h3{color:#526679}
+.control{padding:20px}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+button{min-height:47px;border:0;border-radius:13px;color:white;font-size:16px;font-weight:900;cursor:pointer;transition:.18s}button:hover{transform:translateY(-1px);filter:brightness(1.04)}
+.bg{background:linear-gradient(180deg,#5fbd42,#3d9930)}.bm{background:linear-gradient(180deg,#6e8798,#536c7e)}.bo{background:linear-gradient(180deg,#ef8b1a,#cf5f00)}.bb{background:linear-gradient(180deg,#176aa9,#0f4f86)}
+.block{padding:15px 0;border-top:1px solid var(--line)}.row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px;font-weight:900}
+select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#fbfdff;color:#24425e;font-size:15px;font-weight:850}
+input[type=range]{width:100%;accent-color:var(--b600)}.vbox{min-width:80px;text-align:center;padding:7px 8px;border:1px solid var(--line);border-radius:10px;background:#f9fcff;color:#24425e;font-weight:900}
+.rlabels{display:flex;justify-content:space-between;color:#526679;font-size:13px;font-weight:800;margin-top:4px}
+.stats{margin-top:15px;padding:14px;border:1px dashed #b9d5ee;border-radius:14px;background:#fbfdff}.stats h3{margin:0 0 12px;color:var(--b900)}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{padding:11px 8px;text-align:center;border-radius:12px;background:#f5f9fd;border:1px solid #e0edf8}.stat small{display:block;color:#526679;font-weight:800;margin-bottom:4px}.stat strong{font-size:22px;font-variant-numeric:tabular-nums}.stat em{display:block;margin-top:3px;color:#738596;font-size:12px;font-style:normal;font-weight:700}
+.note{margin-top:14px;padding:13px;border-radius:13px;background:#edf6ff;border:1px solid #cde5ff;color:var(--b900);font-weight:850;line-height:1.6}
+@media(max-width:1180px){.layout{grid-template-columns:1fr}.top{grid-template-columns:1fr}}
+@media(max-width:940px){.viz{grid-template-columns:1fr}.info{grid-template-columns:repeat(2,1fr)}canvas{height:300px}}
+@media(max-width:560px){.hero{padding:22px 20px}.hero h1{font-size:27px}.buttons,.info{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+<header class="hero"><h1>随机变量变换可视化动画</h1><p>选择原随机变量 X 的分布和变换函数 Y=g(X)，观察样本点如何映射，并形成新随机变量 Y 的分布。</p></header>
+<main class="layout">
+<section>
+<div class="card section">
+<h2 class="title">变换演示区</h2>
+<div class="top">
+  <div class="formula"><h3>随机变量变换</h3><div class="math" id="formulaBox">Y=g(X)</div></div>
+  <div class="tip" id="ideaBox">从 X 的分布中抽样，再通过函数 g 把每个 x 映射为 y。大量 y 值累积后，就形成随机变量 Y 的分布。</div>
+</div>
+<div class="viz">
+  <div class="panel"><div class="ph"><h3>X 的分布</h3><span id="xLabel"></span></div><canvas id="xCanvas"></canvas></div>
+  <div class="panel"><div class="ph"><h3>变换函数</h3><span id="gLabel"></span></div><canvas id="mapCanvas"></canvas></div>
+  <div class="panel"><div class="ph"><h3>Y 的分布</h3><span id="yLabel">样本数：0</span></div><canvas id="yCanvas"></canvas></div>
+</div>
+<div class="stage">
+  <h3>单个样本的变换过程：x → y=g(x)</h3>
+  <div class="track"><div class="axis"></div><div class="arrow">x → y</div><div class="dot" id="stageDot"></div><div class="dotlabel" id="stageLabel">等待抽样</div></div>
+</div>
+</div>
+<div class="info">
+  <div class="ibox o"><h3>1. 原变量 X</h3><p>先指定 X 的分布，例如正态、均匀、指数或两点分布。</p></div>
+  <div class="ibox bl"><h3>2. 函数变换</h3><p>通过 Y=g(X) 把每个样本 x 映射为新的样本 y。</p></div>
+  <div class="ibox g"><h3>3. 新变量 Y</h3><p>大量 y 值累积后，形成随机变量 Y 的经验分布。</p></div>
+  <div class="ibox gr"><h3>4. 形状变化</h3><p>非线性变换会改变分布形状，甚至产生偏态或折叠。</p></div>
+</div>
+</section>
+<aside class="card control">
+<h2 class="title">动画控制</h2>
+<div class="buttons"><button class="bg" id="playBtn">▶ 开始动画</button><button class="bm" id="pauseBtn">Ⅱ 暂停</button><button class="bo" id="stepBtn">▶| 单步变换</button><button class="bb" id="resetBtn">⟳ 重置</button></div>
+<div class="block"><div class="row"><span>X 的分布</span></div><select id="distSelect"><option value="normal">标准正态分布 N(0,1)</option><option value="uniform">均匀分布 U(-2,2)</option><option value="exponential">指数分布 Exp(1)</option><option value="twopoint">两点分布 P(0)=0.6, P(1)=0.4</option></select></div>
+<div class="block"><div class="row"><span>变换函数 Y=g(X)</span></div><select id="transformSelect"><option value="square">Y = X²</option><option value="linear">Y = 2X + 1</option><option value="abs">Y = |X|</option><option value="exp">Y = e^X</option><option value="sin">Y = sin(X)</option></select></div>
+<div class="block"><div class="row"><span>动画速度</span><span class="vbox" id="speedBox">中</span></div><input id="speedRange" type="range" min="1" max="5" value="3"><div class="rlabels"><span>慢</span><span>中</span><span>快</span></div></div>
+<div class="block"><div class="row"><span>批量样本</span><span class="vbox" id="batchBox">200个</span></div><input id="batchRange" type="range" min="50" max="2000" step="50" value="200"><button class="bb" id="batchBtn" style="width:100%;margin-top:12px">＋ 批量变换</button></div>
+<div class="stats"><h3>样本统计</h3><div class="sgrid"><div class="stat"><small>样本数</small><strong id="countValue">0</strong><em>已生成 y 值</em></div><div class="stat"><small>最新 x</small><strong id="xValue">--</strong><em>来自 X</em></div><div class="stat"><small>最新 y</small><strong id="yValue">--</strong><em>y=g(x)</em></div><div class="stat"><small>Y 样本均值</small><strong id="meanValue">--</strong><em>经验估计</em></div></div></div>
+<div class="note" id="noteBox">平方、绝对值等非单调变换会把多个 x 映射到同一个 y。</div>
+</aside>
+</main>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const xCanvas=$("xCanvas"), mapCanvas=$("mapCanvas"), yCanvas=$("yCanvas");
+const xctx=xCanvas.getContext("2d"), mctx=mapCanvas.getContext("2d"), yctx=yCanvas.getContext("2d");
+let ys=[], lastX=null, lastY=null, timer=null;
+const dnames={normal:"标准正态分布 N(0,1)",uniform:"均匀分布 U(-2,2)",exponential:"指数分布 Exp(1)",twopoint:"两点分布"};
+const gnames={square:"Y = X²",linear:"Y = 2X + 1",abs:"Y = |X|",exp:"Y = e^X",sin:"Y = sin(X)"};
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function sampleX(){let d=$("distSelect").value;if(d==="normal")return randn();if(d==="uniform")return -2+4*Math.random();if(d==="exponential")return -Math.log(1-Math.random());if(d==="twopoint")return Math.random()<.6?0:1;return randn()}
+function g(x){let t=$("transformSelect").value;if(t==="square")return x*x;if(t==="linear")return 2*x+1;if(t==="abs")return Math.abs(x);if(t==="exp")return Math.exp(x);if(t==="sin")return Math.sin(x);return x}
+function xrng(){let d=$("distSelect").value;if(d==="normal")return[-4,4];if(d==="uniform")return[-2.2,2.2];if(d==="exponential")return[0,6];if(d==="twopoint")return[-.5,1.5];return[-4,4]}
+function yrng(){let [a,b]=xrng(), vals=[];for(let i=0;i<=500;i++){let x=a+(b-a)*i/500;vals.push(g(x))} if($("distSelect").value==="twopoint") vals.push(g(0),g(1));let mn=Math.min(...vals),mx=Math.max(...vals),s=Math.max(.25,mx-mn);return[mn-.08*s,mx+.08*s]}
+function pdf(x){let d=$("distSelect").value;if(d==="normal")return Math.exp(-.5*x*x)/Math.sqrt(2*Math.PI);if(d==="uniform")return x>=-2&&x<=2?.25:0;if(d==="exponential")return x>=0?Math.exp(-x):0;return 0}
+function size(c){let r=c.getBoundingClientRect(),q=devicePixelRatio||1;c.width=Math.round(r.width*q);c.height=Math.round(r.height*q);let ctx=c.getContext("2d");ctx.setTransform(q,0,0,q,0,0);return[r.width,r.height]}
+function axes(ctx,w,h,xt,yt){ctx.clearRect(0,0,w,h);ctx.strokeStyle="#dce7f2";ctx.lineWidth=1;for(let i=0;i<=5;i++){let y=34+i*(h-78)/5;ctx.beginPath();ctx.moveTo(44,y);ctx.lineTo(w-18,y);ctx.stroke()}ctx.strokeStyle="#8aa0b5";ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(44,h-44);ctx.lineTo(w-18,h-44);ctx.stroke();ctx.fillStyle="#6c7a89";ctx.font="700 12px Microsoft YaHei";ctx.fillText(yt,14,24);ctx.fillText(xt,w-46,h-20)}
+function drawX(){let [w,h]=size(xCanvas),[a,b]=xrng(),pw=w-64,ph=h-84;axes(xctx,w,h,"x","密度/概率");if($("distSelect").value==="twopoint"){[{x:0,p:.6},{x:1,p:.4}].forEach(v=>{let xc=44+(v.x-a)/(b-a)*pw,bh=v.p/.6*ph,y=h-44-bh;xctx.fillStyle="#f28c28";xctx.fillRect(xc-24,y,48,bh);xctx.fillStyle="#526679";xctx.font="900 12px Microsoft YaHei";xctx.fillText("x="+v.x,xc-13,h-20)})}else{let max=0;for(let i=0;i<=400;i++){let x=a+(b-a)*i/400;max=Math.max(max,pdf(x))}xctx.beginPath();for(let i=0;i<=500;i++){let xv=a+(b-a)*i/500,yv=pdf(xv),x=44+(xv-a)/(b-a)*pw,y=h-44-yv/max*ph;if(i===0)xctx.moveTo(x,y);else xctx.lineTo(x,y)}xctx.lineTo(w-18,h-44);xctx.lineTo(44,h-44);xctx.fillStyle="rgba(242,140,40,.18)";xctx.fill();xctx.strokeStyle="#f28c28";xctx.lineWidth=3;xctx.beginPath();for(let i=0;i<=500;i++){let xv=a+(b-a)*i/500,yv=pdf(xv),x=44+(xv-a)/(b-a)*pw,y=h-44-yv/max*ph;if(i===0)xctx.moveTo(x,y);else xctx.lineTo(x,y)}xctx.stroke()} if(lastX!==null){let xp=44+(lastX-a)/(b-a)*pw;if(xp>=44&&xp<=w-18){xctx.fillStyle="#2b91e8";xctx.beginPath();xctx.arc(xp,h-50,7,0,Math.PI*2);xctx.fill()}}}
+function drawMap(){let [w,h]=size(mapCanvas),[a,b]=xrng(),[c,d]=yrng(),pw=w-64,ph=h-84;axes(mctx,w,h,"x","y");if(c<0&&d>0){let y0=h-44-(0-c)/(d-c)*ph;mctx.strokeStyle="rgba(82,102,121,.35)";mctx.beginPath();mctx.moveTo(44,y0);mctx.lineTo(w-18,y0);mctx.stroke()}mctx.strokeStyle="#57b947";mctx.lineWidth=3;mctx.beginPath();for(let i=0;i<=500;i++){let xv=a+(b-a)*i/500,yv=g(xv),x=44+(xv-a)/(b-a)*pw,y=h-44-(yv-c)/(d-c)*ph;if(i===0)mctx.moveTo(x,y);else mctx.lineTo(x,y)}mctx.stroke();if(lastX!==null){let x=44+(lastX-a)/(b-a)*pw,y=h-44-(lastY-c)/(d-c)*ph;mctx.setLineDash([5,5]);mctx.strokeStyle="#2b91e8";mctx.beginPath();mctx.moveTo(x,h-44);mctx.lineTo(x,y);mctx.lineTo(44,y);mctx.stroke();mctx.setLineDash([]);mctx.fillStyle="#57b947";mctx.beginPath();mctx.arc(x,y,7,0,Math.PI*2);mctx.fill()}}
+function drawY(){let [w,h]=size(yCanvas),[a,b]=yrng(),pw=w-64,ph=h-84;axes(yctx,w,h,"y","频数");if(!ys.length){yctx.fillStyle="#6c7a89";yctx.font="900 16px Microsoft YaHei";yctx.fillText("点击“开始动画”或“单步变换”",70,h/2);return}let bins=42,cs=Array(bins).fill(0);ys.forEach(v=>{let k=Math.max(0,Math.min(bins-1,Math.floor((v-a)/(b-a)*bins)));cs[k]++});let mx=Math.max(...cs,1),bw=pw/bins;cs.forEach((v,i)=>{let bh=v/mx*ph,x=44+i*bw,y=h-44-bh;yctx.fillStyle="#2b91e8";yctx.fillRect(x+1,y,Math.max(1,bw-2),bh)});if(lastY!==null){let xp=44+(lastY-a)/(b-a)*pw;yctx.fillStyle="#57b947";yctx.beginPath();yctx.arc(xp,h-50,7,0,Math.PI*2);yctx.fill()}}
+function texts(){let t=$("transformSelect").value,d=$("distSelect").value;$("xLabel").textContent=dnames[d];$("gLabel").textContent=gnames[t];$("yLabel").textContent="样本数："+ys.length;if(t==="square"){$("formulaBox").textContent="Y=X²";$("noteBox").textContent="平方变换不是单调函数，正负两个 x 可能映射到同一个 y。"}else if(t==="linear"){$("formulaBox").textContent="Y=2X+1";$("noteBox").textContent="线性变换会平移和拉伸分布，形状本身不发生根本改变。"}else if(t==="abs"){$("formulaBox").textContent="Y=|X|";$("noteBox").textContent="绝对值变换把 x 与 -x 合并到同一个 y，是多对一变换。"}else if(t==="exp"){$("formulaBox").textContent="Y=eˣ";$("noteBox").textContent="指数变换把实数轴映射到正半轴，常形成右偏分布。"}else{$("formulaBox").textContent="Y=sin(X)";$("noteBox").textContent="正弦变换是周期性多对一变换，会把样本压缩到 [-1,1]。"}$("speedBox").textContent=["极慢","慢","中","快","极快"][$("speedRange").value-1];$("batchBox").textContent=$("batchRange").value+"个";$("countValue").textContent=ys.length;$("xValue").textContent=lastX===null?"--":lastX.toFixed(3);$("yValue").textContent=lastY===null?"--":lastY.toFixed(3);$("meanValue").textContent=ys.length?(ys.reduce((a,b)=>a+b,0)/ys.length).toFixed(3):"--"}
+function stage(x,y){let [a,b]=yrng();$("stageDot").className="dot show";$("stageDot").style.left="15%";$("stageLabel").style.left="15%";$("stageLabel").textContent="x="+x.toFixed(3);setTimeout(()=>{let r=Math.max(0,Math.min(1,(y-a)/(b-a))),pos=58+r*32;$("stageDot").className="dot show y";$("stageDot").style.left=pos+"%";$("stageLabel").style.left=pos+"%";$("stageLabel").textContent="y="+y.toFixed(3)},250)}
+function step(){let x=sampleX(),y=g(x);lastX=x;lastY=y;ys.push(y);if(ys.length>6000)ys=ys.slice(-6000);stage(x,y);texts();drawX();drawMap();drawY()}
+function batch(n){for(let i=0;i<n;i++){let x=sampleX(),y=g(x);lastX=x;lastY=y;ys.push(y)}if(ys.length>6000)ys=ys.slice(-6000);stage(lastX,lastY);texts();drawX();drawMap();drawY()}
+function pause(){if(timer){clearInterval(timer);timer=null}}function play(){pause();timer=setInterval(step,[900,620,360,150,55][$("speedRange").value-1])}
+function reset(){pause();ys=[];lastX=lastY=null;$("stageDot").className="dot";$("stageLabel").textContent="等待抽样";texts();drawX();drawMap();drawY()}
+$("playBtn").onclick=play;$("pauseBtn").onclick=pause;$("stepBtn").onclick=()=>{pause();step()};$("resetBtn").onclick=reset;$("batchBtn").onclick=()=>{pause();batch(+$("batchRange").value)}
+$("distSelect").onchange=reset;$("transformSelect").onchange=reset;$("speedRange").oninput=()=>{texts();if(timer)play()};$("batchRange").oninput=texts;window.onresize=()=>{drawX();drawMap();drawY()}
+reset();
+</script>
+</body>
+</html>

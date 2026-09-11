@@ -1,0 +1,10 @@
+{
+  "id": "analytics",
+  "dir": "analytics",
+  "title": "学习数据",
+  "icon": "📈",
+  "route": "analytics",
+  "group": "数据",
+  "order": 50,
+  "subtitle": "问答记录 · 薄弱知识点 · 进度追踪"
+}

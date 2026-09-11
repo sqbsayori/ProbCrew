@@ -1,0 +1,10 @@
+{
+  "id": "knowledge",
+  "dir": "knowledge",
+  "title": "知识讲解",
+  "icon": "📚",
+  "route": "knowledge",
+  "group": "学习",
+  "order": 20,
+  "subtitle": "检索教材 · 生成讲解 · 推荐交互动画"
+}

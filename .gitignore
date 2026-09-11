@@ -1,0 +1,50 @@
+# ===== 密钥与本地配置 =====
+.env
+.env.local
+*.local
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== 运行期数据（学习记录，不入库）=====
+backend/data/*.sqlite
+backend/data/*.sqlite-journal
+backend/data/*.db
+
+# ===== 前端 =====
+node_modules/
+dist/
+build/
+.vite/
+
+# 说明：frontend/vendor/katex/fonts/ 体积约 1.5MB。
+# 建议**保留**（保证离线公式渲染），若仓库体积吃紧可改为构建时下载。
+
+# ===== 编辑器 / 系统 =====
+.vscode/*
+!.vscode/settings.json.example
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== 大体积素材（教材原始文件请勿提交，注意版权）=====
+*.pdf
+!docs/**/*.pdf
+knowledge-base/raw/
+knowledge-base/raw/**
+
+# ===== 自动生成物 =====
+# 注意：frontend/app/features.registry.js 是生成物，但**需要提交**
+# （否则 clone 后不跑脚本就打不开页面）。因此不在忽略列表内。
+
+# ===== 打包产物 =====
+dist/
+.deps-installed

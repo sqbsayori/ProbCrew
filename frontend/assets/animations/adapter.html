@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>交互动画 · 独立播放器</title>
+  <link rel="stylesheet" href="/styles/tokens.css" />
+  <link rel="stylesheet" href="/styles/app.css" />
+  <link rel="stylesheet" href="/styles/components.css" />
+  <style>
+    body { padding: 18px; }
+    .adapter-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+    .adapter-head h1 { font-size: 17px; }
+    .adapter-pick { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  </style>
+</head>
+<body>
+  <!--
+    独立播放器（adapter）
+    ====================
+    用途：不带 SPA 外壳，单独打开某一个动画并统一控制。
+
+    为什么需要它：8 个动画各自有一堆按钮、id 也不完全一致
+    （markov-chain 的播放键是 #startBtn，其余是 #playBtn）。
+    本页读 manifest.json 拿到每个动画的 controls 映射，
+    用同一套按钮去驱动，用户不需要记每个动画的按钮在哪。
+
+    ⚠️ 必须通过 http(s) 打开（本页由 FastAPI 的 /animations 静态目录提供）。
+       直接双击本地 html 文件（file://）会因为 opaque origin 而无法访问
+       iframe 内的文档，控制按钮会全部失效。
+  -->
+  <div class="adapter-head">
+    <h1>🎬 交互动画 · 独立播放器</h1>
+    <div class="adapter-pick">
+      <select class="select" id="picker" style="width:auto;min-width:230px"></select>
+      <a class="btn" id="rawLink" href="#" target="_blank" rel="noopener">↗ 打开原始文件</a>
+      <a class="btn" href="/">← 返回系统</a>
+    </div>
+  </div>
+  <div id="player-host"></div>
+
+  <script type="module">
+    import { createAnimationPlayer } from '/app/components/animation-player.js';
+    import { h, clear, toast } from '/app/core/dom.js';
+
+    const picker = document.getElementById('picker');
+    const host = document.getElementById('player-host');
+    const rawLink = document.getElementById('rawLink');
+
+    let player = null;
+    let manifest = { animations: [], basePath: '/animations/_raw/' };
+
+    try {
+      manifest = await (await fetch('/animations/manifest.json')).json();
+    } catch (err) {
+      toast('无法读取 manifest.json', 'error');
+    }
+
+    const items = manifest.animations || [];
+    if (!items.length) {
+      host.append(h('div', { class: 'card' }, h('div', { class: 'empty' }, '清单为空。')));
+    } else {
+      for (const a of items) {
+        picker.append(h('option', { value: a.id }, `${a.icon || '🎬'} ${a.title}`));
+      }
+
+      function show(id) {
+        const a = items.find((x) => x.id === id) || items[0];
+        picker.value = a.id;
+        const url = `${manifest.basePath}${a.file}`;
+        rawLink.href = url;
+
+        // 换动画前必须销毁上一个 iframe（部分动画有停不掉的渲染循环）
+        player?.destroy();
+        clear(host);
+        player = createAnimationPlayer({
+          url,
+          title: a.title,
+          description: a.description,
+          accent: a.accent,
+          controls: a.controls || {},
+          height: Math.max(560, Math.min(window.innerHeight - 230, 900)),
+        });
+        host.append(player.el);
+
+        // ---- 对外通告"学生正在看哪个动画、操作到哪一步" ----
+        // 伴学助手会读取这个对象，从而在回答里带上动画状态
+        // （例如"你正在看的马尔科夫链动画，当前停在第 3 步"）。
+        let stepCount = 0;
+        window.__ANIM_INFO__ = {
+          id: a.id,
+          title: a.title,
+          state: '已打开（未播放）',
+        };
+
+        // 事件委托：不侵入播放器组件，只旁听控制按钮
+        player.el.addEventListener('click', (ev) => {
+          const btn = ev.target.closest && ev.target.closest('button');
+          if (!btn) return;
+          const label = (btn.textContent || '').trim();
+          if (label.includes('播放')) window.__ANIM_INFO__.state = '播放中';
+          else if (label.includes('暂停')) window.__ANIM_INFO__.state = '已暂停';
+          else if (label.includes('单步')) {
+            stepCount += 1;
+            window.__ANIM_INFO__.state = `单步推进中（第 ${stepCount} 步）`;
+          } else if (label.includes('重置')) {
+            stepCount = 0;
+            window.__ANIM_INFO__.state = '已重置';
+          }
+        });
+
+        // 动画内部自己改状态时也同步一份（若该动画导出了 __ANIM__）
+        try {
+          const inner = player.el.querySelector('iframe');
+          if (inner) {
+            inner.addEventListener('load', () => {
+              try {
+                const api = inner.contentWindow.__ANIM__;
+                if (api && api.getState) {
+                  window.__ANIM_INFO__.getState = api.getState;
+                }
+              } catch (e) {
+                /* 跨域或动画未导出，忽略 */
+              }
+            });
+          }
+        } catch (e) {
+          /* 忽略 */
+        }
+
+        host.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      picker.addEventListener('change', () => show(picker.value));
+      const initial = new URLSearchParams(location.search).get('id');
+      show(initial && items.some((x) => x.id === initial) ? initial : items[0].id);
+
+      // 离开页面时务必销毁 iframe
+      window.addEventListener('beforeunload', () => player?.destroy());
+    }
+  </script>
+</body>
+</html>

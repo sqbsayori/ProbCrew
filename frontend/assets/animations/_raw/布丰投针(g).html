@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>布丰投针可视化动画</title>
+<style>
+:root{
+  --blue-900:#0f4f86;
+  --blue-800:#145d99;
+  --blue-700:#1c73bd;
+  --blue-600:#1e88e5;
+  --blue-500:#2b91e8;
+  --blue-100:#e8f3ff;
+  --blue-050:#f4f9ff;
+
+  --orange:#f28c28;
+  --orange-dark:#d96b00;
+  --green:#57b947;
+  --green-dark:#3d8f32;
+  --red:#ef4444;
+
+  --gray:#aeb9c6;
+  --gray-dark:#526679;
+  --dark:#1f2d3d;
+  --muted:#6c7a89;
+  --bg:#eef4fa;
+  --card:#ffffff;
+  --line:#dce7f2;
+  --shadow:0 14px 32px rgba(31,77,121,.14);
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+  color:var(--dark);
+  background:
+    radial-gradient(circle at 16% 9%, rgba(69,153,232,.20), transparent 34%),
+    radial-gradient(circle at 88% 84%, rgba(87,185,71,.13), transparent 32%),
+    var(--bg);
+}
+
+.page{
+  width:min(1360px,96vw);
+  margin:0 auto;
+  padding:0 0 30px;
+}
+
+.hero{
+  position:relative;
+  margin:0 0 20px;
+  padding:24px 34px 26px;
+  color:#fff;
+  border-radius:0 0 22px 22px;
+  overflow:hidden;
+  background:linear-gradient(135deg,var(--blue-900),var(--blue-700) 58%,#2389dc);
+  box-shadow:0 12px 28px rgba(20,93,153,.28);
+}
+
+.hero::before,
+.hero::after{
+  content:"";
+  position:absolute;
+  border:3px solid rgba(255,255,255,.18);
+  border-radius:50%;
+  transform:rotate(-9deg);
+}
+.hero::before{
+  width:300px;
+  height:82px;
+  right:120px;
+  top:36px;
+}
+.hero::after{
+  width:380px;
+  height:108px;
+  right:-50px;
+  top:74px;
+}
+
+.hero h1{
+  position:relative;
+  z-index:1;
+  margin:0 0 10px;
+  font-size:34px;
+  line-height:1.2;
+  font-weight:900;
+}
+.hero p{
+  position:relative;
+  z-index:1;
+  margin:0;
+  font-size:17px;
+  line-height:1.65;
+  opacity:.97;
+  font-weight:650;
+  max-width:880px;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:1fr 410px;
+  gap:20px;
+}
+
+.card{
+  background:rgba(255,255,255,.95);
+  border:1px solid var(--line);
+  border-radius:22px;
+  box-shadow:var(--shadow);
+}
+
+.section{
+  padding:20px;
+}
+
+.section-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 16px;
+  color:var(--blue-900);
+  font-size:22px;
+  font-weight:900;
+}
+.section-title::before{
+  content:"";
+  width:7px;
+  height:25px;
+  border-radius:8px;
+  background:var(--blue-600);
+  box-shadow:0 0 0 4px rgba(30,136,229,.08);
+}
+
+.formula-row{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:16px;
+  margin-bottom:16px;
+}
+
+.formula-card{
+  padding:16px;
+  border-radius:18px;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg,#fff,#f7fbff);
+  text-align:center;
+}
+.formula-title{
+  color:var(--blue-900);
+  font-size:17px;
+  font-weight:900;
+  margin-bottom:7px;
+}
+.formula{
+  color:#174f96;
+  font-family:Georgia,"Times New Roman",serif;
+  font-size:25px;
+  line-height:1.7;
+}
+.frac{
+  display:inline-block;
+  vertical-align:middle;
+  text-align:center;
+  margin:0 3px;
+}
+.frac .top{
+  display:block;
+  padding:0 8px 3px;
+  border-bottom:2px solid #174f96;
+}
+.frac .bottom{
+  display:block;
+  padding:2px 8px 0;
+}
+
+.idea-card{
+  padding:16px;
+  border-radius:18px;
+  border:1px solid #cde5ff;
+  background:#edf6ff;
+  color:var(--blue-800);
+  line-height:1.65;
+  font-weight:850;
+}
+
+.canvas-card{
+  border:1px solid var(--line);
+  border-radius:18px;
+  background:#fff;
+  overflow:hidden;
+}
+
+.canvas-head{
+  padding:13px 15px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  background:linear-gradient(180deg,#fff,#f8fbff);
+}
+
+.canvas-head h3{
+  margin:0;
+  color:var(--blue-900);
+  font-size:18px;
+}
+
+.canvas-head span{
+  color:var(--muted);
+  font-size:13px;
+  font-weight:800;
+}
+
+canvas{
+  width:100%;
+  height:520px;
+  display:block;
+  background:
+    radial-gradient(circle at 22% 18%, rgba(43,145,232,.08), transparent 28%),
+    #fbfdff;
+}
+
+.legend{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-top:12px;
+  justify-content:center;
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  color:#42576a;
+  font-size:13px;
+  font-weight:850;
+}
+
+.key{
+  width:18px;
+  height:5px;
+  border-radius:999px;
+  display:inline-block;
+  background:var(--blue-500);
+}
+.key.green{background:var(--green)}
+.key.red{background:var(--red)}
+.key.gray{background:var(--gray)}
+
+.info-row{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:12px;
+  margin-top:16px;
+}
+
+.info-card{
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:15px;
+  background:#fff;
+}
+
+.info-card h3{
+  margin:0 0 6px;
+  font-size:16px;
+}
+
+.info-card p{
+  margin:0;
+  color:#647487;
+  font-size:13px;
+  line-height:1.55;
+  font-weight:700;
+}
+
+.orange-card{background:linear-gradient(180deg,#fff,#fff8f0)}
+.blue-card{background:linear-gradient(180deg,#fff,#f2f8ff)}
+.green-card{background:linear-gradient(180deg,#fff,#f4fff0)}
+.gray-card{background:linear-gradient(180deg,#fff,#f7f9fb)}
+.orange-card h3{color:var(--orange-dark)}
+.blue-card h3{color:var(--blue-700)}
+.green-card h3{color:var(--green-dark)}
+.gray-card h3{color:var(--gray-dark)}
+
+.control-panel{
+  padding:20px;
+}
+
+.buttons{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:16px;
+}
+
+button{
+  min-height:47px;
+  border:0;
+  border-radius:13px;
+  font-size:16px;
+  font-weight:900;
+  color:#fff;
+  cursor:pointer;
+  transition:transform .18s ease, filter .18s ease;
+}
+button:hover{
+  transform:translateY(-1px);
+  filter:brightness(1.04);
+}
+
+.btn-green{background:linear-gradient(180deg,#5fbd42,#3d9930)}
+.btn-muted{background:linear-gradient(180deg,#6e8798,#536c7e)}
+.btn-orange{background:linear-gradient(180deg,#ef8b1a,#cf5f00)}
+.btn-blue{background:linear-gradient(180deg,#176aa9,#0f4f86)}
+
+.control-block{
+  padding:15px 0;
+  border-top:1px solid var(--line);
+}
+
+.label-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:9px;
+  font-weight:900;
+}
+
+.value-box{
+  min-width:78px;
+  text-align:center;
+  padding:7px 8px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#f9fcff;
+  color:#24425e;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+}
+
+input[type="range"]{
+  width:100%;
+  accent-color:var(--blue-600);
+}
+
+.range-labels{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  margin-top:4px;
+  color:#526679;
+  font-size:13px;
+  font-weight:800;
+}
+
+.stats-box{
+  margin-top:15px;
+  padding:14px;
+  border:1px dashed #b9d5ee;
+  border-radius:14px;
+  background:#fbfdff;
+}
+
+.stats-box h3{
+  margin:0 0 12px;
+  color:var(--blue-900);
+}
+
+.stats-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+
+.stat{
+  padding:11px 8px;
+  text-align:center;
+  border-radius:12px;
+  background:#f5f9fd;
+  border:1px solid #e0edf8;
+}
+
+.stat small{
+  display:block;
+  color:#526679;
+  font-weight:800;
+  margin-bottom:4px;
+}
+
+.stat strong{
+  font-size:22px;
+  font-variant-numeric:tabular-nums;
+}
+
+.stat em{
+  display:block;
+  margin-top:3px;
+  color:#738596;
+  font-size:12px;
+  font-style:normal;
+  font-weight:700;
+}
+
+.note{
+  margin-top:14px;
+  padding:13px;
+  border-radius:13px;
+  background:#fff8ed;
+  border:1px solid #ffe1ba;
+  color:var(--orange-dark);
+  font-weight:850;
+  line-height:1.6;
+}
+
+@media(max-width:1120px){
+  .layout{grid-template-columns:1fr}
+  .formula-row{grid-template-columns:1fr}
+}
+@media(max-width:820px){
+  .info-row{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+  .hero{padding:22px 20px}
+  .hero h1{font-size:27px}
+  .buttons,.info-row{grid-template-columns:1fr}
+  canvas{height:430px}
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+  <header class="hero">
+    <h1>布丰投针可视化动画</h1>
+    <p>通过随机投针实验，观察“投针与平行线相交”的频率，并用实验结果估计圆周率 π。</p>
+  </header>
+
+  <main class="layout">
+    <section>
+      <div class="card section">
+        <h2 class="section-title">投针实验区</h2>
+
+        <div class="formula-row">
+          <div class="formula-card">
+            <div class="formula-title">当针长 L ≤ 线距 d 时</div>
+            <div class="formula">
+              P(相交)=
+              <span class="frac">
+                <span class="top">2L</span>
+                <span class="bottom">πd</span>
+              </span>
+              ，所以&nbsp;
+              π≈
+              <span class="frac">
+                <span class="top">2LN</span>
+                <span class="bottom">dH</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="idea-card">
+            每次随机给出针的中心位置和角度。若针跨过任意一条平行线，则记为“相交”。投针次数越多，估计值通常越接近 π。
+          </div>
+        </div>
+
+        <div class="canvas-card">
+          <div class="canvas-head">
+            <h3>布丰投针动画</h3>
+            <span id="canvasLabel">绿色：相交；蓝色：未相交</span>
+          </div>
+          <canvas id="needleCanvas"></canvas>
+        </div>
+
+        <div class="legend">
+          <div class="legend-item"><span class="key gray"></span>平行线</div>
+          <div class="legend-item"><span class="key green"></span>相交的针</div>
+          <div class="legend-item"><span class="key"></span>未相交的针</div>
+          <div class="legend-item"><span class="key red"></span>最新投针</div>
+        </div>
+      </div>
+
+      <div class="info-row">
+        <div class="info-card orange-card">
+          <h3>1. 随机位置</h3>
+          <p>针的中心随机落在平行线之间，模拟一次随机投掷。</p>
+        </div>
+        <div class="info-card blue-card">
+          <h3>2. 随机角度</h3>
+          <p>针与平行线方向的夹角随机产生，体现方向不确定性。</p>
+        </div>
+        <div class="info-card green-card">
+          <h3>3. 判断相交</h3>
+          <p>若针的两端跨过某条平行线，就记为一次相交。</p>
+        </div>
+        <div class="info-card gray-card">
+          <h3>4. 估计 π</h3>
+          <p>根据相交频率 H/N，利用公式估计圆周率。</p>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card control-panel">
+      <h2 class="section-title">动画控制</h2>
+
+      <div class="buttons">
+        <button class="btn-green" id="playBtn">▶ 开始动画</button>
+        <button class="btn-muted" id="pauseBtn">Ⅱ 暂停</button>
+        <button class="btn-orange" id="stepBtn">▶| 单次投针</button>
+        <button class="btn-blue" id="resetBtn">⟳ 重置</button>
+      </div>
+
+      <div class="control-block">
+        <div class="label-row">
+          <span>线距 d</span>
+          <span class="value-box" id="dBox">100</span>
+        </div>
+        <input id="dRange" type="range" min="70" max="150" value="100" />
+        <div class="range-labels"><span>70</span><span>平行线间距</span><span>150</span></div>
+      </div>
+
+      <div class="control-block">
+        <div class="label-row">
+          <span>针长 L</span>
+          <span class="value-box" id="lBox">80</span>
+        </div>
+        <input id="lRange" type="range" min="20" max="100" value="80" />
+        <div class="range-labels"><span>20</span><span>要求 L ≤ d</span><span id="lMaxText">100</span></div>
+      </div>
+
+      <div class="control-block">
+        <div class="label-row">
+          <span>动画速度</span>
+          <span class="value-box" id="speedBox">中</span>
+        </div>
+        <input id="speedRange" type="range" min="1" max="5" value="3" />
+        <div class="range-labels"><span>慢</span><span>中</span><span>快</span></div>
+      </div>
+
+      <div class="control-block">
+        <div class="label-row">
+          <span>批量投针</span>
+          <span class="value-box" id="batchBox">100次</span>
+        </div>
+        <input id="batchRange" type="range" min="10" max="1000" step="10" value="100" />
+        <button class="btn-blue" id="batchBtn" style="width:100%; margin-top:12px;">＋ 批量投针</button>
+      </div>
+
+      <div class="stats-box">
+        <h3>实验结果</h3>
+        <div class="stats-grid">
+          <div class="stat">
+            <small>总投针数 N</small>
+            <strong id="totalValue">0</strong>
+            <em>全部随机投掷</em>
+          </div>
+          <div class="stat">
+            <small>相交次数 H</small>
+            <strong id="hitValue">0</strong>
+            <em>跨过平行线</em>
+          </div>
+          <div class="stat">
+            <small>相交频率 H/N</small>
+            <strong id="freqValue">--</strong>
+            <em>实验概率</em>
+          </div>
+          <div class="stat">
+            <small>π 的估计值</small>
+            <strong id="piValue">--</strong>
+            <em>目标约为 3.1416</em>
+          </div>
+        </div>
+      </div>
+
+      <div class="note">
+        教学提示：当投针次数较少时，π 的估计值会明显波动；随着投针次数增加，估计值通常会逐渐稳定。
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById("needleCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const playBtn = document.getElementById("playBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
+  const stepBtn = document.getElementById("stepBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const batchBtn = document.getElementById("batchBtn");
+
+  const dRange = document.getElementById("dRange");
+  const lRange = document.getElementById("lRange");
+  const speedRange = document.getElementById("speedRange");
+  const batchRange = document.getElementById("batchRange");
+
+  const dBox = document.getElementById("dBox");
+  const lBox = document.getElementById("lBox");
+  const speedBox = document.getElementById("speedBox");
+  const batchBox = document.getElementById("batchBox");
+  const lMaxText = document.getElementById("lMaxText");
+
+  const totalValue = document.getElementById("totalValue");
+  const hitValue = document.getElementById("hitValue");
+  const freqValue = document.getElementById("freqValue");
+  const piValue = document.getElementById("piValue");
+
+  let needles = [];
+  let total = 0;
+  let hits = 0;
+  let timer = null;
+
+  function getD(){
+    return Number(dRange.value);
+  }
+
+  function getL(){
+    const d = getD();
+    let l = Number(lRange.value);
+    if(l > d){
+      l = d;
+      lRange.value = d;
+    }
+    return l;
+  }
+
+  function resizeCanvas(){
+    const rect = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = Math.round(rect.width * ratio);
+    canvas.height = Math.round(rect.height * ratio);
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+  }
+
+  function lineYs(){
+    const rect = canvas.getBoundingClientRect();
+    const h = rect.height;
+    const d = getD();
+    const ys = [];
+    const offset = (h % d) / 2;
+    for(let y=offset; y<=h+1; y+=d){
+      ys.push(y);
+    }
+    return ys;
+  }
+
+  function throwNeedle(){
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+    const L = getL();
+    const d = getD();
+
+    const x = 24 + Math.random() * (w - 48);
+    const y = 20 + Math.random() * (h - 40);
+    const theta = Math.random() * Math.PI;
+
+    const dx = Math.cos(theta) * L / 2;
+    const dy = Math.sin(theta) * L / 2;
+
+    const y1 = y - dy;
+    const y2 = y + dy;
+
+    const ys = lineYs();
+    let hit = false;
+    for(const ly of ys){
+      if((y1 - ly) * (y2 - ly) <= 0){
+        hit = true;
+        break;
+      }
+    }
+
+    const needle = {
+      x1:x-dx,
+      y1:y-dy,
+      x2:x+dx,
+      y2:y+dy,
+      hit,
+      newest:true
+    };
+
+    needles.forEach(n => n.newest = false);
+    needles.push(needle);
+    if(needles.length > 1200){
+      needles.shift();
+    }
+
+    total += 1;
+    if(hit) hits += 1;
+
+    updateStats();
+    draw();
+  }
+
+  function batchThrow(n){
+    for(let i=0;i<n;i++){
+      throwNeedle();
+    }
+    draw();
+  }
+
+  function draw(){
+    resizeCanvas();
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width;
+    const h = rect.height;
+
+    ctx.clearRect(0,0,w,h);
+
+    // background grid
+    ctx.strokeStyle = "rgba(15,79,134,.045)";
+    ctx.lineWidth = 1;
+    for(let x=0; x<w; x+=24){
+      ctx.beginPath();
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,h);
+      ctx.stroke();
+    }
+
+    // parallel lines
+    ctx.strokeStyle = "#aeb9c6";
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([]);
+    const ys = lineYs();
+    ys.forEach(y=>{
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(w,y);
+      ctx.stroke();
+    });
+
+    // line labels
+    ctx.fillStyle = "#7a8b9a";
+    ctx.font = "800 12px Microsoft YaHei";
+    if(ys.length >= 2){
+      ctx.fillText("线距 d = " + getD(), 14, ys[0] + (ys[1]-ys[0])/2);
+    }
+
+    // needles
+    needles.forEach(n=>{
+      if(n.newest){
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 4.2;
+      }else if(n.hit){
+        ctx.strokeStyle = "#57b947";
+        ctx.lineWidth = 2.8;
+      }else{
+        ctx.strokeStyle = "#2b91e8";
+        ctx.lineWidth = 2.2;
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(n.x1,n.y1);
+      ctx.lineTo(n.x2,n.y2);
+      ctx.stroke();
+
+      if(n.newest){
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.arc((n.x1+n.x2)/2,(n.y1+n.y2)/2,4.5,0,Math.PI*2);
+        ctx.fill();
+      }
+    });
+  }
+
+  function updateStats(){
+    const d = getD();
+    const L = getL();
+
+    dBox.textContent = d;
+    lBox.textContent = L;
+    lRange.max = d;
+    lMaxText.textContent = d;
+
+    const speeds = ["极慢","慢","中","快","极快"];
+    speedBox.textContent = speeds[Number(speedRange.value)-1];
+    batchBox.textContent = batchRange.value + "次";
+
+    totalValue.textContent = total;
+    hitValue.textContent = hits;
+
+    if(total === 0 || hits === 0){
+      freqValue.textContent = "--";
+      piValue.textContent = "--";
+    }else{
+      const freq = hits / total;
+      const piEst = (2 * L * total) / (d * hits);
+      freqValue.textContent = freq.toFixed(4);
+      piValue.textContent = piEst.toFixed(4);
+    }
+  }
+
+  function intervalMs(){
+    const s = Number(speedRange.value);
+    return [900,620,360,150,45][s-1];
+  }
+
+  function play(){
+    pause();
+    timer = setInterval(throwNeedle, intervalMs());
+  }
+
+  function pause(){
+    if(timer){
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  function reset(){
+    pause();
+    needles = [];
+    total = 0;
+    hits = 0;
+    updateStats();
+    draw();
+  }
+
+  playBtn.addEventListener("click", play);
+  pauseBtn.addEventListener("click", pause);
+  stepBtn.addEventListener("click", ()=>{
+    pause();
+    throwNeedle();
+  });
+  resetBtn.addEventListener("click", reset);
+  batchBtn.addEventListener("click", ()=>{
+    pause();
+    batchThrow(Number(batchRange.value));
+  });
+
+  dRange.addEventListener("input", ()=>{
+    reset();
+  });
+
+  lRange.addEventListener("input", ()=>{
+    reset();
+  });
+
+  speedRange.addEventListener("input", ()=>{
+    updateStats();
+    if(timer) play();
+  });
+
+  batchRange.addEventListener("input", updateStats);
+
+  window.addEventListener("resize", draw);
+
+  updateStats();
+  draw();
+})();
+</script>
+</body>
+</html>

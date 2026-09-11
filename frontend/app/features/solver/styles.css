@@ -1,0 +1,113 @@
+/** 题目讲解页专属样式 */
+
+.slv-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.ex-side {
+  position: sticky;
+  top: calc(var(--topbar-h) + 12px);
+  max-height: calc(100vh - var(--topbar-h) - 40px);
+  overflow-y: auto;
+}
+
+.ex-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ex-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  background: #fcfdff;
+  transition: var(--transition);
+}
+.ex-card:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow);
+}
+.ex-head {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+.ex-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  line-height: 1.45;
+}
+.ex-problem {
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.65;
+  /* 折叠预览：太长会挤掉其他题目 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ex-card:hover .ex-problem {
+  -webkit-line-clamp: unset;
+}
+.ex-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 7px;
+}
+.ex-tags .tag {
+  font-size: 10.5px;
+}
+.ex-hint {
+  font-size: 11.5px;
+  color: #92400e;
+  background: var(--warning-bg);
+  border-radius: 5px;
+  padding: 5px 8px;
+  margin-top: 7px;
+  line-height: 1.6;
+}
+.ex-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.solver-note {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.solver-note > div {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 11px 13px;
+  background: #fcfdff;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.solver-note b {
+  display: block;
+  color: var(--text);
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+@media (max-width: 1040px) {
+  .slv-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ex-side {
+    position: static;
+    max-height: none;
+  }
+  .solver-note {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
