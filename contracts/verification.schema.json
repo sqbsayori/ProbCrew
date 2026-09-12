@@ -1,0 +1,183 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://probcrew/contracts/verification.schema.json",
+  "title": "验证报告",
+  "description": "一次解答的验证结论。这是 ProbCrew 主线的核心契约 —— 它定义了什么叫「这个答案是对的」，以及系统在什么情况下必须承认自己不确定。规则：绝不允许在没有验证报告的情况下输出解答。",
+  "type": "object",
+  "required": ["level", "passed", "checks"],
+  "additionalProperties": false,
+
+  "properties": {
+    "level": {
+      "type": "string",
+      "enum": ["A", "B", "C", "D"],
+      "description": "验证级别。按题型自动判定，决定能给用户什么承诺。A=纯数值可完全验证；B=符号可强验证；C=应用题可交叉验证；D=证明题/开放题不做承诺。"
+    },
+    "levelLabel": {
+      "type": "string",
+      "description": "级别的人类可读说明，直接展示给用户。不要用「已校验」这种笼统说法。",
+      "examples": ["已通过数值重算验证", "未做自动验证，请自行判断"]
+    },
+    "passed": {
+      "type": "boolean",
+      "description": "所有必检项是否都通过。注意：passed=true 不代表答案绝对正确，只代表「在该级别下没有发现矛盾」。"
+    },
+    "checks": {
+      "type": "array",
+      "description": "逐项检查结果。顺序有意义：前端按此顺序展示。",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/check" }
+    },
+    "disagreements": {
+      "type": "array",
+      "description": "多路求解之间的分歧。**非空是重要信号，不是错误** —— 说明题目本身有歧义或某条路径推理有误，应优先人工介入而不是投票取多数。",
+      "items": {
+        "type": "object",
+        "required": ["paths", "values"],
+        "additionalProperties": false,
+        "properties": {
+          "paths": {
+            "type": "array",
+            "description": "产生分歧的求解路径标识。",
+            "items": { "type": "string", "enum": ["direct", "case_split", "specialize", "reverse"] }
+          },
+          "values": {
+            "type": "array",
+            "description": "各路径给出的结果（字符串形式，保留 LaTeX 或数值原文）。",
+            "items": { "type": "string" }
+          },
+          "note": { "type": "string", "description": "分歧原因的初步分析。" }
+        }
+      }
+    },
+    "unsupported": {
+      "type": "array",
+      "description": "当前无法自动验证的部分。必须如实列出，前端会明确展示，不允许静默忽略。",
+      "items": { "type": "string" },
+      "examples": [["证明部分：无法自动验证逻辑严谨性", "题设中「独立」的判定依赖图模型，未做形式化检验"]]
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "综合置信度。**不是**通过了多少项的比例，而是加权结果：A 级通过可达 1.0；C 级即使全通过也不应高于 0.85；D 级应 ≤ 0.4。"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "验证耗时。用于监控验证链的开销。"
+    }
+  },
+
+  "definitions": {
+    "check": {
+      "type": "object",
+      "required": ["name", "passed", "method"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "检查项中文名，会直接展示给用户。",
+          "examples": ["数值重算", "符号等价性", "约束检查", "多路一致性", "反向代入"]
+        },
+        "passed": { "type": "boolean" },
+        "method": {
+          "type": "string",
+          "description": "用的什么手段。**这决定了这条检查有多可信** —— sympy_recompute 是确定性计算，heuristic 只是启发式，二者不可同日而语。",
+          "enum": [
+            "sympy_recompute",
+            "symbolic_equivalence",
+            "constraint",
+            "multi_path",
+            "back_substitute",
+            "grounding",
+            "heuristic"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "description": "检查说明。通过也要写（写清楚「验证了什么」），失败更要写。"
+        },
+        "evidence": {
+          "type": "object",
+          "description": "证据。失败时这里是定位问题的关键。",
+          "additionalProperties": true,
+          "properties": {
+            "expected": { "type": "string", "description": "期望值（LaTeX 或数值）。" },
+            "actual": { "type": "string", "description": "实际值。" },
+            "step_index": { "type": "integer", "description": "出问题的是第几步（若适用）。" },
+            "counterexample": { "type": "string", "description": "反例（若适用）。" }
+          }
+        },
+        "duration_ms": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "level": "A",
+      "levelLabel": "已通过数值重算验证",
+      "passed": true,
+      "checks": [
+        {
+          "name": "数值重算",
+          "passed": true,
+          "method": "sympy_recompute",
+          "detail": "用 SymPy 独立计算 P(D) = 0.25×0.05 + 0.35×0.04 + 0.40×0.02 = 0.0345，与解答一致（50 位精度比对）",
+          "evidence": { "expected": "0.0345", "actual": "0.0345" },
+          "duration_ms": 42
+        },
+        {
+          "name": "约束检查",
+          "passed": true,
+          "method": "constraint",
+          "detail": "结果 0.0345 ∈ [0, 1]，满足概率取值范围"
+        },
+        {
+          "name": "多路一致性",
+          "passed": true,
+          "method": "multi_path",
+          "detail": "直接代入 与 分情形求和 两条路径结果一致"
+        }
+      ],
+      "confidence": 1.0,
+      "duration_ms": 210
+    },
+    {
+      "level": "C",
+      "levelLabel": "已交叉验证（未做形式化证明）",
+      "passed": true,
+      "checks": [
+        { "name": "约束检查", "passed": true, "method": "constraint", "detail": "后验概率之和为 1" },
+        { "name": "多路一致性", "passed": true, "method": "multi_path", "detail": "2 条路径结果一致" }
+      ],
+      "disagreements": [
+        {
+          "paths": ["direct", "case_split"],
+          "values": ["0.3623", "0.3623"],
+          "note": "无分歧，此处仅演示结构"
+        }
+      ],
+      "unsupported": ["题设中「随机抽取」的均匀性假设未做形式化检验"],
+      "confidence": 0.8,
+      "duration_ms": 480
+    },
+    {
+      "level": "D",
+      "levelLabel": "未做自动验证，请自行判断",
+      "passed": false,
+      "checks": [
+        {
+          "name": "自动验证适用性",
+          "passed": false,
+          "method": "heuristic",
+          "detail": "本题为证明题，当前不具备自动验证逻辑严谨性的能力"
+        }
+      ],
+      "unsupported": ["证明的逻辑严谨性", "每一步的充分性"],
+      "confidence": 0.3,
+      "duration_ms": 5
+    }
+  ]
+}

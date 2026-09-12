@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://probcrew/contracts/math-task.schema.json",
+  "title": "MathTask 数学任务",
+  "description": "把自然语言题目形式化后的结构化表示。这是正确性保障链的第一环（M1.1）—— 后面的数值重算、符号校验、约束检查全部依赖它。形式化错了，后面全错，所以本结构必须带 warnings 让下游知道哪里不确定。",
+  "type": "object",
+  "required": ["raw", "goal", "task_type", "formalize_confidence"],
+  "additionalProperties": false,
+
+  "properties": {
+    "raw": {
+      "type": "string",
+      "description": "原始题目文本，一字不改地保留。**永远不要只存形式化结果** —— 出错时要能回溯到原文。"
+    },
+    "goal": {
+      "type": "string",
+      "description": "要求解的目标，用 LaTeX 或符号表达。",
+      "examples": ["P(D)", "E[X]", "P(A_1 \\mid D)"]
+    },
+    "unknowns": {
+      "type": "array",
+      "description": "待求的未知量符号列表。多问时会有多个。",
+      "items": { "type": "string" },
+      "examples": [["P(D)", "P(A_1 \\mid D)"]]
+    },
+    "known": {
+      "type": "array",
+      "description": "题设给出的已知量。每个都要能追溯到原文的哪一句。",
+      "items": {
+        "type": "object",
+        "required": ["symbol", "value", "source_text"],
+        "additionalProperties": false,
+        "properties": {
+          "symbol": { "type": "string", "description": "符号，如 P(A_1)", "examples": ["P(A_1)"] },
+          "value": { "type": "string", "description": "值，保留原文形式（分数优先于小数）", "examples": ["0.25", "\\frac{1}{4}"] },
+          "unit": { "type": ["string", "null"], "description": "单位（若适用）", "examples": ["小时", null] },
+          "source_text": {
+            "type": "string",
+            "description": "★ 这个值来自题干的哪一句。**必填** —— 没有出处的已知量就是幻觉的来源。"
+          }
+        }
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "description": "求解必须满足的约束条件。用于 M1.4 的约束检查。",
+      "items": {
+        "type": "object",
+        "required": ["expr", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "expr": { "type": "string", "description": "约束的符号表达", "examples": ["P(B) > 0"] },
+          "kind": {
+            "type": "string",
+            "enum": ["domain", "inequality", "integrality", "sum_to_one", "non_negative", "other"],
+            "description": "约束类型。sum_to_one 用于「完备事件组」这类；integrality 用于「n 为正整数」。"
+          },
+          "origin": {
+            "type": "string",
+            "enum": ["explicit", "implicit"],
+            "description": "explicit=题目明说；implicit=由数学对象本身决定（如 σ>0）。**两者要分开**，implicit 的约束被违反说明形式化可能有问题。"
+          }
+        }
+      }
+    },
+    "domain": {
+      "type": "object",
+      "description": "数学对象的定义域信息，供约束检查用。",
+      "additionalProperties": true,
+      "properties": {
+        "distribution": { "type": ["string", "null"], "description": "涉及的分布 key（与 /api/distributions 一致）", "examples": ["normal", null] },
+        "params": { "type": "object", "description": "分布参数" },
+        "support": { "type": ["string", "null"], "description": "取值范围", "examples": ["[0, 1]", "(0, +\\infty)"] }
+      }
+    },
+    "task_type": {
+      "type": "string",
+      "description": "题型。决定用哪条验证路径与哪套解题套路。该值应与 knowledge_base/problems.json 里的题型分类一致。",
+      "examples": ["total_probability", "bayes", "expectation", "variance", "distribution_transform", "clt", "unknown"]
+    },
+    "topic": {
+      "type": ["string", "null"],
+      "description": "所属章节 id，与 knowledge_base 的章节编号一致。",
+      "examples": ["ch01", null]
+    },
+    "formalize_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "description": "形式化的置信度。低于 0.6 时下游**必须**降级验证级别并提示用户，不允许静默继续。"
+    },
+    "warnings": {
+      "type": "array",
+      "description": "形式化过程中的不确定之处。例如「题干有歧义」「缺少必要条件」。下游据此决定是否触发 HITL。",
+      "items": { "type": "string" },
+      "examples": [["题干未明确说明抽取是否放回，按不放回处理", "「随机抽取」隐含均匀性假设，未在题面写明"]]
+    },
+    "ambiguous_readings": {
+      "type": "array",
+      "description": "存在多种可能解读时，列出各解读。**这是纠错的重要线索** —— 用户可能想的是另一种读法。",
+      "items": {
+        "type": "object",
+        "required": ["reading", "differs_in"],
+        "additionalProperties": false,
+        "properties": {
+          "reading": { "type": "string", "description": "另一种解读的说明" },
+          "differs_in": { "type": "string", "description": "与主解读的差别在哪" }
+        }
+      }
+    }
+  },
+
+  "examples": [
+    {
+      "raw": "某工厂有三条生产线，甲、乙、丙的产量分别占全厂总产量的 20%、30%、50%，三条线的次品率分别为 6%、3%、1%。现从全厂产品中随机抽取一件，求它是次品的概率。",
+      "goal": "P(D)",
+      "unknowns": ["P(D)"],
+      "known": [
+        { "symbol": "P(A_1)", "value": "0.20", "unit": null, "source_text": "甲的产量占全厂总产量的 20%" },
+        { "symbol": "P(A_2)", "value": "0.30", "unit": null, "source_text": "乙的产量占全厂总产量的 30%" },
+        { "symbol": "P(A_3)", "value": "0.50", "unit": null, "source_text": "丙的产量占全厂总产量的 50%" },
+        { "symbol": "P(D \\mid A_1)", "value": "0.06", "unit": null, "source_text": "甲线的次品率为 6%" },
+        { "symbol": "P(D \\mid A_2)", "value": "0.03", "unit": null, "source_text": "乙线的次品率为 3%" },
+        { "symbol": "P(D \\mid A_3)", "value": "0.01", "unit": null, "source_text": "丙线的次品率为 1%" }
+      ],
+      "constraints": [
+        { "expr": "A_1 \\cup A_2 \\cup A_3 = \\Omega", "kind": "sum_to_one", "origin": "explicit" },
+        { "expr": "A_i A_j = \\varnothing", "kind": "other", "origin": "explicit" },
+        { "expr": "P(A_i) > 0", "kind": "non_negative", "origin": "implicit" }
+      ],
+      "domain": { "distribution": null, "params": {}, "support": null },
+      "task_type": "total_probability",
+      "topic": "ch01",
+      "formalize_confidence": 0.95,
+      "warnings": [],
+      "ambiguous_readings": []
+    },
+    {
+      "raw": "某元件的次品率为 5%，现独立抽取 10 件。求恰好抽到 2 件次品的概率。",
+      "goal": "P(X = 2)",
+      "unknowns": ["P(X = 2)"],
+      "known": [
+        { "symbol": "p", "value": "0.05", "unit": null, "source_text": "次品率为 5%" },
+        { "symbol": "n", "value": "10", "unit": null, "source_text": "抽取 10 件" }
+      ],
+      "constraints": [
+        { "expr": "n \\in \\mathbb{Z}^+", "kind": "integrality", "origin": "implicit" },
+        { "expr": "0 < p < 1", "kind": "inequality", "origin": "implicit" }
+      ],
+      "domain": { "distribution": "binomial", "params": { "n": 10, "p": 0.05 }, "support": "[0, 10]" },
+      "task_type": "binomial_pmf",
+      "topic": "ch02",
+      "formalize_confidence": 0.98,
+      "warnings": [],
+      "ambiguous_readings": [
+        {
+          "reading": "「独立抽取」理解为有放回抽取",
+          "differs_in": "若无放回，应使用超几何分布而非二项分布"
+        }
+      ]
+    }
+  ]
+}

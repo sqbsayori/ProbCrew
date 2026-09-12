@@ -18,6 +18,7 @@
         "tool.call",
         "tool.result",
         "artifact",
+        "verification.report",
         "hitl.request",
         "hitl.resolved",
         "run.end",
@@ -171,5 +172,105 @@
         "y": { "type": "array", "items": { "type": "number" } }
       }
     }
-  }
+  },
+
+  "examples": [
+    {
+      "type": "run.start",
+      "ts": 1786000000.1,
+      "run_id": "run_ab12cd34",
+      "session_id": "web_9f3a",
+      "query": "这段什么意思？"
+    },
+    {
+      "type": "context.received",
+      "ts": 1786000000.2,
+      "run_id": "run_ab12cd34",
+      "summary": "已读取 《1.4 全概率公式与贝叶斯公式》、5171 字、13 个公式、已选中 41 字、含视频进度、跨 2 个框架",
+      "data": {
+        "title": "1.4 全概率公式与贝叶斯公式",
+        "chars": 5171,
+        "selection_chars": 41,
+        "formula_count": 13,
+        "frame_count": 2,
+        "has_media": true,
+        "outline": "- 1.4 全概率公式与贝叶斯公式\n  - 全概率公式\n  - 贝叶斯公式"
+      }
+    },
+    {
+      "type": "plan",
+      "ts": 1786000000.4,
+      "run_id": "run_ab12cd34",
+      "intent": "multi",
+      "steps": [
+        { "agent": "visualizer", "label": "Visualization Agent 分布可视化" },
+        { "agent": "knowledge", "label": "Knowledge Agent 知识讲解" },
+        { "agent": "solver", "label": "Problem Solver 题目讲解" }
+      ],
+      "reason": "同时命中 visualize/solve 多个领域，并行调度 3 个 Agent"
+    },
+    {
+      "type": "tool.result",
+      "ts": 1786000000.6,
+      "run_id": "run_ab12cd34",
+      "tool": "kb_search",
+      "ok": true,
+      "duration_ms": 12,
+      "data": { "hit_count": 2, "empty": false }
+    },
+    {
+      "type": "verification.report",
+      "ts": 1786000001.9,
+      "run_id": "run_ab12cd34",
+      "ok": true,
+      "summary": "已通过数值重算验证",
+      "data": {
+        "level": "A",
+        "levelLabel": "已通过数值重算验证",
+        "passed": true,
+        "checks": [
+          {
+            "name": "数值重算",
+            "passed": true,
+            "method": "sympy_recompute",
+            "detail": "SymPy 独立计算 P(D)=0.0345，与解答一致"
+          }
+        ],
+        "confidence": 1.0
+      }
+    },
+    {
+      "type": "artifact",
+      "ts": 1786000001.2,
+      "run_id": "run_ab12cd34",
+      "kind": "formula",
+      "payload": {
+        "title": "关键公式",
+        "items": ["P(A)=\\sum_{i=1}^{n}P(B_i)P(A\\mid B_i)"]
+      }
+    },
+    {
+      "type": "hitl.request",
+      "ts": 1786000002.1,
+      "run_id": "run_ab12cd34",
+      "agent": "verifier",
+      "hitl_id": "run_ab12cd34",
+      "draft": "以上解题结论属于关键结论，按流程需你确认后才能作为最终答案。",
+      "options": ["confirm", "correct", "supplement"]
+    },
+    {
+      "type": "run.end",
+      "ts": 1786000003.0,
+      "run_id": "run_ab12cd34",
+      "status": "ok",
+      "final_answer": "## 结论\n\n$$P(D)=0.0345$$"
+    },
+    {
+      "type": "error",
+      "ts": 1786000004.0,
+      "run_id": "run_ab12cd34",
+      "agent": "visualizer",
+      "message": "符号推导失败：不支持的分布 key"
+    }
+  ]
 }

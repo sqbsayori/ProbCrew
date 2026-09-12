@@ -1,0 +1,140 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://probcrew/contracts/page-context.schema.json",
+  "title": "页面上下文",
+  "description": "助手注入到课程页面后，抽取并上报的「学生正在看什么」。这是 ProbCrew 区别于通用聊天机器人的根本 —— 用户说「这段」时，系统必须知道是哪段。实现位置：backend/app/kernel/page_context.py（后端归并）与 frontend/widget/extractor.js（前端抽取）。",
+  "type": "object",
+  "additionalProperties": false,
+
+  "definitions": {
+    "heading": {
+      "type": "object",
+      "required": ["level", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "level": { "type": "integer", "minimum": 1, "maximum": 4, "description": "标题层级，对应 h1–h4。" },
+        "text": { "type": "string", "maxLength": 120 }
+      }
+    },
+
+    "media": {
+      "type": "object",
+      "description": "视频/音频进度。有它才能回答「我学到哪了」。",
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["video", "audio"] },
+        "currentTime": {
+          "type": ["number", "null"],
+          "description": "当前播放位置（秒）。**可能为 null** —— 元素存在但元数据未加载时读不到，不要当成 0。"
+        },
+        "duration": { "type": ["number", "null"], "description": "总时长（秒），可能为 null。" },
+        "title": { "type": "string", "description": "视频标题，取自 data-title 或最近的标题。" }
+      }
+    },
+
+    "animation": {
+      "type": "object",
+      "description": "学生正在操作的交互式动画。由前端 anim-bridge 维护。**不是所有页面都有**。",
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string", "description": "动画 id，与 /api/animations 一致。", "examples": ["bayes"] },
+        "title": { "type": "string" },
+        "file": { "type": "string", "description": "原始文件名（含 (g) 后缀）。" },
+        "concepts": { "type": "array", "items": { "type": "string" }, "description": "该动画涉及的知识点关键词。" },
+        "state": {
+          "type": "string",
+          "description": "人类可读的当前状态，**会直接喂给模型**。所以写成自然语言而不是枚举值。",
+          "examples": ["已暂停（已单步 3 次）", "已打开，尚未开始播放"]
+        },
+        "steps": { "type": ["integer", "null"], "description": "学生单步推进的次数。" },
+        "playing": { "type": ["boolean", "null"], "description": "当前是否在播放。" }
+      }
+    },
+
+    "frame": {
+      "title": "FrameContext",
+      "description": "单个 frame（顶层页或某个 iframe）抽取到的内容。真实课程平台的课件常嵌在跨域 iframe 里，所以必须逐 frame 抽取、再汇总。",
+      "type": "object",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": { "type": "string" },
+        "title": { "type": "string", "maxLength": 160 },
+        "headings": { "type": "array", "items": { "$ref": "#/definitions/heading" } },
+        "text": {
+          "type": "string",
+          "description": "正文纯文本，**上限 12000 字符**（后端 MAX_TEXT）。公式以 LaTeX 原样保留。超出部分靠 page_search 按需检索。"
+        },
+        "selection": {
+          "type": "string",
+          "description": "用户划选的文字，上限 3000 字符。可能出现在任意 frame —— 归并时取第一个非空的。"
+        },
+        "formulas": {
+          "type": "array",
+          "description": "页面上的 LaTeX 公式。独立公式 $$...$$ 全收；行内只收「像公式的」（长度≥6 且含反斜杠命令/等号/上下标/数字运算），否则会被 $A$、$B$ 这类单符号淹掉。",
+          "items": { "type": "string" },
+          "maxItems": 40
+        },
+        "media": { "$ref": "#/definitions/media" },
+        "animation": { "$ref": "#/definitions/animation" },
+        "scroll_pct": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "滚动位置比例。" },
+        "score": {
+          "type": "number",
+          "description": "内容丰富度评分，用于多 frame 仲裁。计算口径：`len(text) + 40×公式数 + 20×标题数 + 600×(有选中) + 200×(有媒体)`。**前后端必须用同一口径**，否则归并结果会不一致。"
+        }
+      }
+    }
+  },
+
+  "properties": {
+    "source": {
+      "type": "string",
+      "enum": ["userscript", "widget", "api", "spa", "test"],
+      "description": "上下文从哪来。userscript=油猴注入第三方平台；widget=loader.js 嵌入自建站；api=调用方直接传；spa=独立站点（通常不传）。"
+    },
+    "url": { "type": "string", "description": "主 frame 的地址（内容最丰富的那一帧）。" },
+    "title": { "type": "string" },
+    "headings": { "type": "array", "items": { "$ref": "#/definitions/heading" } },
+    "text": { "type": "string" },
+    "selection": { "type": "string" },
+    "formulas": { "type": "array", "items": { "type": "string" } },
+    "media": { "$ref": "#/definitions/media" },
+    "animation": { "$ref": "#/definitions/animation" },
+    "scroll_pct": { "type": ["number", "null"] },
+    "frames": {
+      "type": "array",
+      "description": "全部参与归并的 frame。用于诊断「跨了几个框架」。",
+      "items": { "$ref": "#/definitions/frame" }
+    }
+  },
+
+  "examples": [
+    {
+      "source": "userscript",
+      "selection": "贝叶斯公式则是在已知结果 B 已发生的条件下，反过来推断某个成因 A_i 的概率。",
+      "frames": [
+        {
+          "url": "https://mooc.example.edu/course/1",
+          "title": "课程学习页",
+          "text": "首页 课程 我的 学习进度 62% 上一节 下一节",
+          "headings": [{ "level": 1, "text": "课程导航" }],
+          "score": 46
+        },
+        {
+          "url": "https://mooc.example.edu/courseware/ch01-4.html",
+          "title": "1.4 全概率公式与贝叶斯公式",
+          "headings": [
+            { "level": 1, "text": "1.4 全概率公式与贝叶斯公式" },
+            { "level": 2, "text": "贝叶斯公式" }
+          ],
+          "text": "完备事件组：A1..An 两两互不相容，并集为样本空间 Ω…",
+          "selection": "",
+          "formulas": ["P(A_i\\mid B)=\\frac{P(A_i)P(B\\mid A_i)}{\\sum_j P(A_j)P(B\\mid A_j)}"],
+          "media": { "kind": "video", "currentTime": 318, "duration": 900, "title": "全概率公式与贝叶斯公式" },
+          "scroll_pct": 0.46,
+          "score": 342
+        }
+      ]
+    }
+  ]
+}

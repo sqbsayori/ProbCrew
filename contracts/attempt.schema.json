@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://probcrew/contracts/attempt.schema.json",
+  "title": "作答事件（Attempt）",
+  "description": "⏸ **预留契约 —— B线挂起，暂不实现。** 学生一次作答的结构化记录。整个 B线（学习者建模 / 教师端）的全部模型都吃这一张表，因此 schema 必须先冻结再动手。详见 docs/08 与 docs/09 第六节（B线启动条件）。",
+  "type": "object",
+  "required": [
+    "attempt_id",
+    "student_id",
+    "item_id",
+    "kc_ids",
+    "correct",
+    "duration_ms",
+    "hint_used",
+    "attempt_no",
+    "source",
+    "created_at"
+  ],
+  "additionalProperties": false,
+
+  "properties": {
+    "attempt_id": { "type": "string", "description": "本次作答的唯一 id（UUID）。" },
+    "student_id": {
+      "type": "string",
+      "description": "★ **假名化** id（UUID），绝不是学号。映射表与数据分开存放，由教师保管。见 docs/08 的 Q4 隐私章节。"
+    },
+    "item_id": { "type": "string", "description": "题目 id，关联题库表。用于 IRT 难度标定。" },
+    "session_id": { "type": ["string", "null"], "description": "所属会话，用于把同一轮的多次作答串起来。" },
+    "kc_ids": {
+      "type": "array",
+      "minItems": 1,
+      "description": "这道题考查的知识点（可多个）。★ BKT 是**按知识点**建模型的，所以这个字段是整张表的核心。多知识点题会让同一次作答同时更新多个知识点的掌握度。",
+      "items": { "type": "string" }
+    },
+    "correct": { "type": "boolean", "description": "是否答对。BKT 的观测值。" },
+    "score": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "部分得分（若有）。用于非 0/1 评分的题；纯客观题与 correct 一致。"
+    },
+    "answer_raw": { "type": "string", "description": "学生的原始作答。用于错误分析与后续的批改改进。" },
+    "answer_normalized": {
+      "type": ["string", "null"],
+      "description": "归一化后的答案（LaTeX 或标准形式），便于与标准答案做等价性比较。"
+    },
+    "expected": { "type": "string", "description": "标准答案。**冗余存储**，因为题库可能更新，而历史作答要能追溯当时的标准。" },
+    "hint_used": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "★ **两个最容易漏掉、但缺了模型就废的字段之一。** 用了几次提示。\\n\\n「独立答对」和「用了 3 次提示才答对」在掌握度上是两回事 —— 少了这个字段，BKT 会把它们当成同一个观测，学到的参数直接失真。"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "★ **另一个关键字段。** 作答耗时（毫秒）。用于区分「会但慢」与「猜对」——极短时间答对更可能是猜测（对应 BKT 的 p_guess）。"
+    },
+    "attempt_no": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "对同一道题的第几次尝试。BKT 的学习效应体现在重复练习上，所以必须区分首刷与重做。"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["practice", "exam", "self", "classroom"],
+      "description": "数据来源。**质量分层**：exam 最可信（独立完成），practice 次之，self（自己随便做的）质量最低。建模时应按 source 加权或过滤。\\n\\n如果按 Q4 的方案做了脱敏，可以在此标记 `redacted: true` 的批次。"
+    },
+    "grader": {
+      "type": "string",
+      "enum": ["sympy", "llm", "human", "self"],
+      "description": "由谁批改的。★ **如果 LLM 参与了批改，必须如实标记** —— 数据合规审计要用，而且 LLM 批改有误差，建模时要考虑这个噪声源。"
+    },
+    "grader_confidence": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 1,
+      "description": "批改置信度。低置信度的标注在建模时可降权。"
+    },
+    "created_at": {
+      "type": "number",
+      "description": "时间戳（epoch 秒）。★ 遗忘模型（FSRS/SM-2）必须靠它 —— 没有时间戳就做不了复习调度。"
+    },
+    "deleted": {
+      "type": "boolean",
+      "default": false,
+      "description": "软删除标记。响应「删除我的数据」请求时置 true 并清空 answer_raw，保留一条审计痕迹。"
+    }
+  },
+
+  "examples": [
+    {
+      "attempt_id": "att_7f3a91c2",
+      "student_id": "stu_4b8e1d0a",
+      "item_id": "ex-total-prob-01",
+      "session_id": "sess_2c9f",
+      "kc_ids": ["kp_total_probability", "kp_partition"],
+      "correct": true,
+      "score": 1.0,
+      "answer_raw": "0.026",
+      "answer_normalized": "\\frac{13}{500}",
+      "expected": "0.026",
+      "hint_used": 0,
+      "duration_ms": 184000,
+      "attempt_no": 1,
+      "source": "practice",
+      "grader": "sympy",
+      "grader_confidence": 1.0,
+      "created_at": 1786000000.0,
+      "deleted": false
+    },
+    {
+      "attempt_id": "att_9d2b04ef",
+      "student_id": "stu_4b8e1d0a",
+      "item_id": "ex-bayes-01",
+      "session_id": "sess_2c9f",
+      "kc_ids": ["kp_bayes", "kp_total_probability"],
+      "correct": false,
+      "score": 0.0,
+      "answer_raw": "0.99",
+      "answer_normalized": "0.99",
+      "expected": "0.0194",
+      "hint_used": 2,
+      "duration_ms": 41000,
+      "attempt_no": 1,
+      "source": "practice",
+      "grader": "sympy",
+      "grader_confidence": 1.0,
+      "created_at": 1786000600.0,
+      "deleted": false
+    }
+  ]
+}

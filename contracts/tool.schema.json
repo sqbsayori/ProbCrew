@@ -1,0 +1,103 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://probcrew/contracts/tool.schema.json",
+  "title": "工具规格与调用结果",
+  "description": "工具是 Agent 与外部能力（检索、符号计算、数据库）之间唯一的接口。本契约固定两件事：工具如何声明自己（ToolSpec），以及一次调用必须返回什么形状（ToolResult）。遵循本契约，换实现（如把本地检索换成 Qdrant）时调用方一行都不用改。",
+  "description_note": "本文件是 definitions 容器：根级不描述单一对象，两份契约分别在 definitions.toolSpec 与 definitions.toolResult。",
+
+  "definitions": {
+    "toolSpec": {
+      "title": "ToolSpec",
+      "description": "工具的声明。由 @tool 装饰器生成，kernel.registry 在启动时扫描发现。实现位置：backend/app/kernel/specs.py",
+      "type": "object",
+      "required": ["id", "name", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "唯一英文 id，snake_case。**一旦有 Agent 声明使用它，改名即为破坏性变更。**",
+          "examples": ["kb_search", "distribution_properties"]
+        },
+        "name": { "type": "string", "description": "中文名。", "examples": ["知识库检索"] },
+        "description": {
+          "type": "string",
+          "description": "一句话说明用途。**这段话会进入 Agent 的工具清单**，写得清楚与否影响模型选工具的准确率。"
+        },
+        "owner": {
+          "type": "string",
+          "description": "负责该工具的角色（R1–R5）。用于分工追踪 —— 出问题时知道找谁。",
+          "examples": ["R3"]
+        },
+        "dangerous": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否有副作用（写数据库、发外部请求）。目前无危险工具，但预留 —— 未来接 MCP 外部工具时必须用上。"
+        }
+      },
+      "examples": [
+        {
+          "id": "kb_search",
+          "name": "知识库检索",
+          "description": "在概率论与数理统计教材知识库中做混合检索，返回相关章节片段（含 LaTeX 公式）。",
+          "owner": "R3",
+          "dangerous": false
+        }
+      ]
+    },
+
+    "toolResult": {
+      "title": "ToolResult",
+      "description": "工具调用的返回值。**三态约定** —— 每个工具都必须能区分这三种情况，不能混为一谈。",
+      "type": "object",
+      "required": ["ok"],
+      "additionalProperties": true,
+      "properties": {
+        "ok": {
+          "type": "boolean",
+          "description": "执行是否成功。**注意：ok=true 不代表查到了东西** —— 「没查到」是 ok=true + empty=true 的正常结果，不是错误。把二者混起来会让 Agent 误判为工具故障而反复重试。"
+        },
+        "empty": {
+          "type": "boolean",
+          "description": "★ 可选但**强烈建议**：区分「成功但无结果」与「失败」。检索类工具必须提供。"
+        },
+        "available": {
+          "type": "boolean",
+          "description": "★ 可选但**强烈建议**：该能力当前是否可用。如 page_search 在没有页面上下文时应返回 available=false —— 让 Agent 知道是「条件不具备」而不是「查不到」，从而给出正确的提示语。"
+        },
+        "error": {
+          "type": "string",
+          "description": "ok=false 时的错误说明。要写人能看懂的原因，不要只甩异常类型。"
+        },
+        "note": {
+          "type": "string",
+          "description": "给 Agent 的补充说明。例如 learning_stats 会写明「demo 阶段为单点正确率排序，未做级联定位」—— 防止模型夸大能力。"
+        }
+      },
+      "examples": [
+        {
+          "ok": true,
+          "empty": false,
+          "query": "什么是贝叶斯公式",
+          "hit_count": 2,
+          "chunks": [
+            { "chapter": "ch01 随机事件与概率", "heading": "全概率公式与贝叶斯公式", "content": "…", "score": 0.3278 }
+          ]
+        },
+        {
+          "ok": true,
+          "empty": true,
+          "query": "马尔可夫链的平稳分布",
+          "hit_count": 0,
+          "chunks": []
+        },
+        {
+          "ok": true,
+          "available": false,
+          "reason": "当前没有页面上下文（助手的页面读取未启用或该页面无正文）",
+          "chunks": []
+        }
+      ]
+    }
+  }
+}

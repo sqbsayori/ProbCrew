@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://probcrew/contracts/agent.schema.json",
+  "title": "Agent 规格与产出",
+  "description": "定义一个 Agent 如何对外声明自己（AgentSpec），以及它一次执行后必须返回什么（AgentResult）。这两者是「加一个 Agent 只需加一个文件」这一机制的基础 —— 只要符合本契约，kernel 就能自动发现并挂进图，不需要改任何共享文件。",
+  "description_note": "本文件是 definitions 容器：根级不描述单一对象，两份契约分别在 definitions.agentSpec 与 definitions.agentResult。校验时用 definitions 下的 examples。",
+
+  "definitions": {
+    "agentSpec": {
+      "title": "AgentSpec",
+      "description": "Agent 的对外声明。由 kernel.registry 在启动时扫描发现。实现位置：backend/app/kernel/specs.py",
+      "type": "object",
+      "required": ["id", "name", "role", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "description": "唯一英文 id，snake_case。会出现在事件、日志、API 里，**一旦发布不可更改**（改名等于破坏契约）。",
+          "examples": ["knowledge", "page_tutor"]
+        },
+        "name": {
+          "type": "string",
+          "description": "中文名，直接展示给用户。",
+          "examples": ["Knowledge Agent 知识讲解"]
+        },
+        "role": {
+          "type": "string",
+          "enum": ["router", "generator", "verifier", "analyst", "tool"],
+          "description": "角色。**决定它在图里的位置**：router 只做调度不产出内容；generator 是产出型（必须有 verifier 校验它）；verifier 不产出内容只做校验；analyst 只读数据。"
+        },
+        "description": {
+          "type": "string",
+          "description": "一句话职责说明。会显示在工作台的 Agent 角色卡上，也会喂给 Orchestrator 做路由参考。"
+        },
+        "intents": {
+          "type": "array",
+          "description": "能处理哪些意图。Orchestrator 据此决定是否唤起它。取值必须来自 `_router.INTENT_AGENTS` 的键。",
+          "items": { "type": "string" },
+          "examples": [["knowledge", "multi"]]
+        },
+        "tools": {
+          "type": "array",
+          "description": "★ 允许调用的工具 id。这是**角色门控**：调用未在列表里的工具会被 ToolRegistry 拒绝。不是提示词约束，是代码强制。",
+          "items": { "type": "string" },
+          "examples": [["kb_search", "recommend_animation"]]
+        },
+        "emits": {
+          "type": "array",
+          "description": "可能产出的 artifact 类型。用于前端预判要挂载哪些渲染器。",
+          "items": { "type": "string", "enum": ["animation", "chart", "formula", "steps", "text", "table"] }
+        },
+        "can_verify": {
+          "type": "array",
+          "description": "仅 verifier 角色使用：能校验哪些 Agent 的产出。体现「生成/验证分权」的对应关系。",
+          "items": { "type": "string" },
+          "examples": [["knowledge", "solver", "visualizer"]]
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "description": "前端主题色。用于协作轨迹面板里区分不同的 Agent。",
+          "examples": ["#2F6DF6"]
+        },
+        "icon": { "type": "string", "description": "单个 emoji。", "examples": ["📚"] }
+      },
+      "examples": [
+        {
+          "id": "knowledge",
+          "name": "Knowledge Agent 知识讲解",
+          "role": "generator",
+          "description": "检索教材并组织知识点讲解；重点公式用 LaTeX，并按需挂载交互动画。",
+          "intents": ["knowledge", "visualize", "multi", "animation"],
+          "tools": ["kb_search", "recommend_animation"],
+          "emits": ["formula", "animation", "table"],
+          "can_verify": ["knowledge"],
+          "accent": "#2F6DF6",
+          "icon": "📚"
+        }
+      ]
+    },
+
+    "artifact": {
+      "title": "Artifact",
+      "description": "结构化产物。**发数据不发 HTML** —— 前端决定怎么渲染，后端不管展示。payload 结构随 kind 而定，见 events.schema.json 的 artifactPayload。",
+      "type": "object",
+      "required": ["kind", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "type": "string", "enum": ["animation", "chart", "formula", "steps", "text", "table"] },
+        "payload": { "type": "object", "additionalProperties": true }
+      }
+    },
+
+    "agentResult": {
+      "title": "AgentResult",
+      "description": "Agent 一次执行的产出。实现位置：backend/app/kernel/specs.py::AgentResult",
+      "type": "object",
+      "required": ["agent", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "agent": { "type": "string", "description": "自己的 id，必须与 SPEC.id 一致。kernel 会校验。" },
+        "text": {
+          "type": "string",
+          "description": "给用户的自然语言产出（Markdown + LaTeX）。公式一律用 $...$ / $$...$$，**不要用 \\(...\\) 或 \\[...\\]** —— 前端渲染器不认后者。"
+        },
+        "ok": {
+          "type": "boolean",
+          "default": true,
+          "description": "本次是否成功。false 时 kernel 会在事件里标记失败，但**不会中断整图** —— 一个 Agent 失败不应拖垮其他并行分支。"
+        },
+        "data": {
+          "type": "object",
+          "description": "结构化元数据，不进用户可见文本。用于 Verifier 校验、运行轨迹、后续评估。",
+          "additionalProperties": true
+        },
+        "artifacts": {
+          "type": "array",
+          "description": "本次产出的结构化产物。kernel 会逐个发 artifact 事件。",
+          "items": { "$ref": "#/definitions/artifact" }
+        },
+        "needs_hitl": {
+          "type": "boolean",
+          "default": false,
+          "description": "是否请求人工确认。**generator 一般不用自己设这个** —— 是否触发 HITL 由 verifier 的风险分级决定（见 verification.schema.json）。"
+        },
+        "hitl_draft": {
+          "type": "string",
+          "description": "needs_hitl 为 true 时，展示给用户审核的草稿。"
+        }
+      },
+      "examples": [
+        {
+          "agent": "knowledge",
+          "text": "## 结论先说\n\n全概率公式把复杂事件按原因分解：$$P(A)=\\sum_{i}P(B_i)P(A\\mid B_i)$$",
+          "ok": true,
+          "data": { "retrieved": 4, "formulas": 1, "animations": 1, "grounded": true },
+          "artifacts": [
+            { "kind": "formula", "payload": { "title": "关键公式", "items": ["P(A)=\\sum_{i}P(B_i)P(A\\mid B_i)"] } }
+          ],
+          "needs_hitl": false
+        }
+      ]
+    }
+  }
+}

@@ -46,6 +46,7 @@ EventType = Literal[
     "tool.call",
     "tool.result",
     "artifact",
+    "verification.report",
     "hitl.request",
     "hitl.resolved",
     "run.end",
@@ -196,6 +197,24 @@ def tool_result(
 
 def artifact(run_id: str, kind: ArtifactKind, payload: dict[str, Any]) -> Event:
     return ev("artifact", run_id=run_id, kind=kind, payload=payload)
+
+
+def verification_report(run_id: str, report: dict[str, Any]) -> Event:
+    """验证报告（M1 核心）。
+
+    契约见 `contracts/verification.schema.json`。
+    **绝不允许在没有验证报告的情况下输出解答** —— 这是主线对用户的承诺。
+
+    报告走 `data` 字段（结构由 verification.schema.json 定义），
+    `summary` 放级别说明，方便前端不解析 data 也能直接显示。
+    """
+    return ev(
+        "verification.report",
+        run_id=run_id,
+        data=report,
+        summary=report.get("levelLabel") or f"验证级别 {report.get('level', 'D')}",
+        ok=bool(report.get("passed")),
+    )
 
 
 def hitl_request(
