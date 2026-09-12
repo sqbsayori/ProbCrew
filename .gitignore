@@ -52,3 +52,4 @@ dist/
 # ===== 临时文件（打包/提交辅助）=====
 .git-commit-msg.tmp
 *.tmp
+.release-notes-*.md

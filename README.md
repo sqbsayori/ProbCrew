@@ -1,10 +1,21 @@
-# 概率论伴学助手 · 多智能体原型骨架
+# ProbCrew · 概率论伴学助手
+
+[![CI](https://github.com/sqbsayori/ProbCrew/actions/workflows/ci.yml/badge.svg)](https://github.com/sqbsayori/ProbCrew/actions/workflows/ci.yml)
+![python](https://img.shields.io/badge/python-3.11%2B-blue)
+![license](https://img.shields.io/badge/status-prototype-orange)
 
 > **一个可以注入到在线课程页面上的 AI 伴学助手**（悬浮球 / 虚拟页宠）：
 > 它读得懂学生正在看的这一页 —— 正文、标题层级、公式、划选的文字、视频进度、
 > 甚至正在操作的动画停在第几步 —— 然后用 LangGraph 编排的多个 Agent 协作答疑。
 >
 > 技术栈：LangGraph 编排 + FastAPI + 免构建 ESM + Canvas 自绘形象 + SymPy。
+
+| | |
+|---|---|
+| 仓库 | https://github.com/sqbsayori/ProbCrew |
+| 当前阶段 | 原型骨架（对应 `docs/05` 的 P0 完成） |
+| 执行依据 | [`docs/09-主线范围与数据需求清单.md`](docs/09-主线范围与数据需求清单.md) |
+| 契约 | [`contracts/`](contracts/) —— 前后端唯一约定 |
 
 ---
 
