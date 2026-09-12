@@ -25,7 +25,7 @@ def _frame(**kw):
 
 
 def _sample_page():
-    """模拟超星那种"顶层壳 + 课件 iframe"的结构。"""
+    """模拟智慧树那种"顶层壳 + 课件 iframe"的结构。"""
     from app.kernel.page_context import merge_frames
 
     return merge_frames(

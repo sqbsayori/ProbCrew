@@ -17,7 +17,7 @@
  *   data-auto-open  "true" 时进入页面就展开面板（默认 false）
  *   data-skin       "pet"（虚拟页宠，默认）或 "ball"（极简悬浮球）
  *
- * 第三方平台（超星/智慧树等，改不了源码）请改用 `probstat-assistant.user.js`
+ * 第三方平台（智慧树等，改不了源码）请改用 `probstat-assistant.user.js`
  * 油猴脚本 —— 那条路径用 `@require` 加载同一批模块，能绕开平台的 CSP 限制。
  */
 (function () {
@@ -52,7 +52,7 @@
    * 必须按依赖顺序加载。
    *
    * 子框架里**不加载 assistant.js** —— 助手 UI 只在顶层渲染一份，
-   * 否则每个 iframe 里都会冒出一个悬浮球（超星一页能有十几个 frame）。
+   * 否则每个 iframe 里都会冒出一个悬浮球（智慧树一页能有十几个 frame）。
    * 子框架的职责只有一个：装好上下文应答器，把自己的内容上报给顶层。
    */
   var MODULES_UI = [
