@@ -2,7 +2,7 @@
 """打包为可分发的原型演示包。
 
 用法：
-    cd our-system
+    cd ProbCrew
     python scripts/package.py                    # 默认版本 0.1.0
     python scripts/package.py --version 0.2.0
     python scripts/package.py --no-zip           # 只生成目录，不压缩（便于检查）

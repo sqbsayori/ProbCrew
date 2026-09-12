@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         概率论伴学助手（多 Agent）
-// @namespace    https://github.com/our-system/probstat-assistant
+// @namespace    https://github.com/sqbsayori/ProbCrew
 // @version      1.0.0
 // @description  在任意在线课程页面上挂一个"能读懂当前页面"的 AI 伴学助手：悬浮球 / 虚拟页宠，支持划词解释、页内答疑、视频进度感知、跨 iframe 内容读取。
 // @author       大创项目组

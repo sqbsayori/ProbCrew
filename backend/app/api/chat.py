@@ -135,7 +135,7 @@ async def _persist(request: Request, run: Any, session_id: str) -> None:
     except Exception as exc:  # noqa: BLE001
         import logging
 
-        logging.getLogger("our-system").warning("学习记录落库失败 run_id=%s: %s", run.run_id, exc)
+        logging.getLogger("probcrew").warning("学习记录落库失败 run_id=%s: %s", run.run_id, exc)
 
 
 # --------------------------------------------------------------------------

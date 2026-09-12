@@ -5,7 +5,7 @@
  * 验证 `\(...\)` / `\[...\]` 是否被正确归一化为 `$...$` / `$$...$$`。
  *
  * 用法：
- *     cd our-system/frontend
+ *     cd ProbCrew/frontend
  *     node widget/_test_render.mjs
  */
 import { readFileSync } from 'node:fs';

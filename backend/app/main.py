@@ -1,4 +1,4 @@
-"""our-system 后端入口。
+"""ProbCrew 后端入口。
 
 启动即完成全部装配，**装配过程不需要人工登记任何清单**：
     app/agents/*.py   → 自动发现 Agent
@@ -8,7 +8,7 @@
 因此 5 个人各自新增文件后，直接重启就生效，不会互相冲突。
 
 启动：
-    cd our-system/backend
+    cd ProbCrew/backend
     python -m app.main
 然后浏览器打开 http://127.0.0.1:8000
 """
@@ -104,7 +104,7 @@ def build_app() -> FastAPI:
         app.include_router(router)
 
     # ---- 静态资源 ----
-    # 1) 交互动画（our-system 内的副本 + manifest）：必须由 http(s) 提供，
+    # 1) 交互动画（ProbCrew 内的副本 + manifest）：必须由 http(s) 提供，
     #    才能同源驱动 iframe 内的控制按钮（file:// 下 contentDocument 会被拒绝）
     if ANIMATIONS_DIR.exists():
         app.mount("/animations", StaticFiles(directory=str(ANIMATIONS_DIR)), name="animations")

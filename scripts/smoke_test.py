@@ -16,7 +16,7 @@
 - 计算：SymPy 分布推导的期望/方差是否与解析解一致
 
 用法：
-    cd our-system
+    cd ProbCrew
     python scripts/smoke_test.py
 """
 from __future__ import annotations

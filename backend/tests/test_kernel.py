@@ -1,7 +1,7 @@
 """内核与领域层的单元测试（不联网、不调 LLM）。
 
 运行：
-    cd our-system/backend
+    cd ProbCrew/backend
     python -m pytest tests -q
 或（不装 pytest 也能跑）：
     python tests/test_kernel.py

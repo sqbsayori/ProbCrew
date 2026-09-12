@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://our-system/contracts/events.schema.json",
+  "$id": "https://probcrew/contracts/events.schema.json",
   "title": "Agent 运行时事件协议",
   "description": "后端 Agent 运行时 → 前端的唯一契约。SSE 以 `data: <本对象 JSON>` 单行传输。前端必须忽略未知 type（保证向后兼容）。字段随 type 取用，未用到的字段不应出现在报文中（后端已 exclude_none）。",
   "type": "object",

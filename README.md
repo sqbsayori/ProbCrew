@@ -13,7 +13,7 @@
 ```powershell
 # 最省事：双击 启动.bat（Linux/macOS 用 bash start.sh）
 # 或手动：
-cd 大创\our-system
+cd 大创\ProbCrew
 .\scripts\dev.ps1            # 有 API Key 用 DeepSeek，没 Key 自动降级 Mock
 ```
 
@@ -73,7 +73,7 @@ KaTeX 已 vendor 到本地，8 个交互动画本身就是自包含 HTML。
 ## 目录结构
 
 ```
-our-system/
+ProbCrew/
 ├── README.md
 ├── contracts/                    【契约层】前后端唯一约定
 │   └── events.schema.json            13 种事件（含 context.received）
@@ -138,7 +138,7 @@ our-system/
 ## 自检
 
 ```powershell
-cd our-system
+cd ProbCrew
 python scripts/smoke_test.py                    # 端到端 25 项
 python backend/tests/test_kernel.py             # 内核 16 项
 python backend/tests/test_page_context.py       # 页面伴学 15 项

@@ -9,7 +9,7 @@
     app/features/<dir>/feature.json   ->   app/features.registry.js
 
 用法：
-    cd our-system
+    cd ProbCrew
     python scripts/gen_registry.py
 
 在 CI 里跑 `--check` 可以校验注册表是否与目录一致（防止有人忘了生成）。

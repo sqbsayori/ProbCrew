@@ -9,7 +9,7 @@
 #       4. 运行记录在内存 —— 重启即丢
 #
 #  用法：
-#     cd our-system
+#     cd ProbCrew
 #     docker compose -f deployment/docker-compose.yml up -d --build
 # ============================================================================
 

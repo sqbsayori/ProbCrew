@@ -5,8 +5,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# app/config.py -> app -> backend -> our-system
-#   parents[0]=app  parents[1]=backend  parents[2]=our-system
+# app/config.py -> app -> backend -> ProbCrew
+#   parents[0]=app  parents[1]=backend  parents[2]=ProbCrew
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
 ANIMATIONS_DIR = FRONTEND_DIR / "assets" / "animations"
@@ -19,8 +19,8 @@ ANIMATIONS_DIR = FRONTEND_DIR / "assets" / "animations"
 #:
 #: 候选顺序（取第一个存在的）：
 #:   1. `<工作区根>/动画`                  —— 开发时的实际摆放
-#:   2. `<工作区根>/大创/动画`              —— 若 our-system 直接放在工作区根
-#:   3. `our-system/../动画`               —— 若动画文件夹被移进 大创/
+#:   2. `<工作区根>/大创/动画`              —— 若 ProbCrew 直接放在工作区根
+#:   3. `ProbCrew/../动画`               —— 若动画文件夹被移进 大创/
 #:   4. `frontend/assets/animations/_raw`   —— ★ 分发包专用：清单里已经带了这 8 个动画的
 #:                                            副本，所以演示包解压后开箱即用，
 #:                                            不依赖外部文件夹

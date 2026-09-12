@@ -4,7 +4,7 @@
 **助手必须理解学生当前在看什么，并且把指代词正确接住。**
 
 运行：
-    cd our-system/backend
+    cd ProbCrew/backend
     python tests/test_page_context.py
 """
 from __future__ import annotations
