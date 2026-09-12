@@ -1,0 +1,180 @@
+# ============================================================================
+#  ProbCrew · 持续集成
+# ----------------------------------------------------------------------------
+#  这个文件是"不靠自觉"的那一层：
+#    - 契约与实现不一致 → 红灯
+#    - 测试挂了        → 红灯
+#    - 提交了密钥      → 红灯
+#    - 前端语法错误    → 红灯
+#
+#  设计原则：**快**。全部检查在 1-2 分钟内跑完，否则没人愿意等，
+#  就会开始绕过它。所以不装大数据依赖、不做完整 E2E。
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+# 同一个分支上的旧运行没必要继续 —— 新推送一来就取消旧的，省额度
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 测试一律走 Mock：不花钱、不联网、结果确定
+  LLM_PROVIDER: mock
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: "1"
+
+jobs:
+  # --------------------------------------------------------------------------
+  # 后端：契约 + 测试
+  # --------------------------------------------------------------------------
+  backend:
+    name: 后端检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      # --- 契约校验（最重要的一项）---
+      - name: 契约校验（38 项）
+        run: python scripts/check_contracts.py
+
+      # --- API 契约是否过期 ---
+      - name: 检查 contracts/api.md 是否与实现一致
+        run: |
+          python scripts/gen_api_contract.py
+          if ! git diff --quiet contracts/api.md; then
+            echo "::error::contracts/api.md 已过期。请本地运行 python scripts/gen_api_contract.py 后提交。"
+            git diff --stat contracts/api.md
+            exit 1
+          fi
+
+      # --- 前端页面注册表是否同步 ---
+      - name: 前端页面注册表一致性
+        run: python scripts/gen_registry.py --check
+
+      # --- 端到端自检 ---
+      - name: 端到端自检（25 项）
+        run: python scripts/smoke_test.py
+
+      # --- 单元测试 ---
+      - name: 内核单测
+        run: python backend/tests/test_kernel.py
+
+      - name: 页面伴学单测
+        run: python backend/tests/test_page_context.py
+
+  # --------------------------------------------------------------------------
+  # 前端：语法 + 渲染器
+  # --------------------------------------------------------------------------
+  frontend:
+    name: 前端检查
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # 免构建前端不需要 npm install，但语法错误必须拦住
+      - name: JS 语法检查
+        run: |
+          fail=0; n=0
+          while IFS= read -r f; do
+            n=$((n+1))
+            tmp="$(mktemp --suffix=.mjs)"
+            cp "$f" "$tmp"
+            if ! node --check "$tmp" 2>&1; then
+              echo "::error file=$f::语法错误"
+              fail=$((fail+1))
+            fi
+            rm -f "$tmp"
+          done < <(find frontend -name '*.js' -not -path '*/vendor/*' -not -path '*/node_modules/*')
+          echo "已检查 $n 个 JS 文件，失败 $fail"
+          [ "$fail" -eq 0 ]
+
+      - name: 渲染器归一化测试（6 项）
+        run: node frontend/widget/_test_render.mjs
+
+  # --------------------------------------------------------------------------
+  # 安全：密钥扫描
+  # --------------------------------------------------------------------------
+  secrets:
+    name: 密钥扫描
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # 扫全历史，不只是当前快照
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # 复用打包脚本里的扫描逻辑，保证"本地能过"= "CI 能过"
+      - name: 扫描密钥（与 scripts/package.py 同一套规则）
+        run: |
+          python - <<'PY'
+          import re, subprocess, sys
+          from pathlib import Path
+
+          # 与 scripts/package.py 的 SECRET_PATTERNS 保持一致
+          PATTERNS = [
+              (re.compile(r"sk-[A-Za-z0-9]{16,}"), "疑似 OpenAI/DeepSeek 风格密钥"),
+              (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "疑似 AWS Access Key"),
+              (re.compile(r"\bghp_[A-Za-z0-9]{30,}\b"), "疑似 GitHub Token"),
+              (re.compile(r"github_pat_[A-Za-z0-9_]{20,}"), "疑似 GitHub 细粒度 PAT"),
+              (re.compile(r"(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*['\"][A-Za-z0-9_\-]{20,}['\"]"),
+               "疑似硬编码密钥"),
+          ]
+          ALLOW = {"requirements.txt", ".env.example", "contracts/README.md",
+                   "scripts/package.py", "docs/07-部署与分发.md", "原型声明.md",
+                   ".github/workflows/ci.yml"}
+          TEXT = {".py", ".js", ".mjs", ".md", ".json", ".txt", ".html", ".css",
+                  ".sh", ".bat", ".ps1", ".yml", ".yaml", ".toml", ".cfg", ".ini", ""}
+
+          files = subprocess.run(["git", "ls-files"], capture_output=True, text=True,
+                                 check=True).stdout.split()
+          hits = []
+          for rel in files:
+              if rel in ALLOW:
+                  continue
+              p = Path(rel)
+              if p.suffix.lower() not in TEXT or not p.is_file():
+                  continue
+              try:
+                  txt = p.read_text(encoding="utf-8", errors="ignore")
+              except OSError:
+                  continue
+              for i, line in enumerate(txt.splitlines(), 1):
+                  if any(x in line for x in ("your-api-key", "sk-your", "sk-xxx", "example", "占位")):
+                      continue
+                  for pat, desc in PATTERNS:
+                      if pat.search(line):
+                          hits.append(f"{rel}:{i}  {desc}")
+                          break
+
+          if hits:
+              print("::error::发现疑似密钥，请清理后重试")
+              for h in hits:
+                  print(f"  {h}")
+              sys.exit(1)
+          print(f"✔ 扫描 {len(files)} 个文件，未发现密钥")
+          PY
