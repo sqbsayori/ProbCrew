@@ -76,6 +76,24 @@ EXPLAIN_ACTION_WORDS = (
     "没听懂", "不懂", "翻译", "这是啥", "是什么", "推导", "怎么来的", "展开",
 )
 
+#: 问"我学到哪了"的信号词。
+#: 放在 _router 而不是 page_tutor，是因为**路由必须认识它们** ——
+#: 否则在划选状态下问进度，会被误判成"解释选中的内容"（曾经真的这样）。
+PROGRESS_WORDS = ("学到哪", "看到哪", "进度", "讲到哪", "还剩多少", "看了多久", "学到哪儿")
+
+#: 明确在问"整页/整节"而不是"选中那段"的说法。
+PAGE_SUMMARY_WORDS = (
+    "讲了什么", "讲的是什么", "讲了啥", "说什么", "内容是什么", "什么内容",
+    "梳理", "大纲", "结构", "概括",
+)
+
+#: 出现这些词就**不该**按"解释选中内容"处理，哪怕问题很短。
+#:
+#: 这是修一个真实 bug 的关键：浏览器会保留选区，学生划过一次词之后，
+#: 接下来问"我学到哪了"也带着选区。如果只按"短问题"判断，
+#: 就会拿一段无关的选中文字去回答进度问题。
+NOT_ABOUT_SELECTION = PROGRESS_WORDS + PAGE_SUMMARY_WORDS
+
 _INTENT_ORDER = ("analytics", "visualize", "solve", "animation", "knowledge")
 
 
@@ -104,16 +122,30 @@ def route(query: str, page_context: object | None = None) -> tuple[str, list[str
     has_page = bool(pc is not None and getattr(pc, "has_content", False))
 
     # ---- 优先级 1：划选了文字，并且在问"这是什么意思" ----
-    # 短问题（<= 12 字）也按选中内容理解 —— 学生划完词通常只打两个字
-    if has_selection and (
-        any(w in q for w in EXPLAIN_ACTION_WORDS) or len(q) <= 12
-    ):
-        return (
-            "explain_selection",
-            ["page_tutor"],
-            f"检测到你在页面上划选了 {len(str(getattr(pc, 'selection', '')).strip())} 字，"
-            "优先解释选中的内容",
-        )
+    # 两道门，缺一不可：
+    #   a) 有明确的"解释"动作词 → 一定是问选中内容；
+    #   b) 问题很短（<= 12 字）**且没有任何别的意图信号** → 学生划完词通常只打两个字。
+    #
+    # 门 b 的额外条件（NOT_ABOUT_SELECTION / match_intents）是修 bug 加的：
+    # 浏览器会保留选区，学生划过一次词之后，接下来问"我学到哪了""这一页讲了什么"
+    # 也带着选区。只看"短问题"就会拿一段无关的选中文字去回答进度/整页问题。
+    if has_selection:
+        off_topic = any(w in q for w in NOT_ABOUT_SELECTION)
+        if not off_topic:
+            if any(w in q for w in EXPLAIN_ACTION_WORDS):
+                return (
+                    "explain_selection",
+                    ["page_tutor"],
+                    f"检测到你在页面上划选了 "
+                    f"{len(str(getattr(pc, 'selection', '')).strip())} 字，优先解释选中的内容",
+                )
+            if len(q) <= 12 and not match_intents(q):
+                return (
+                    "explain_selection",
+                    ["page_tutor"],
+                    f"问题很短且页面上有选中文字，按「解释选中内容」处理"
+                    f"（选中 {len(str(getattr(pc, 'selection', '')).strip())} 字）",
+                )
 
     # ---- 优先级 2：明确指代"当前页面" ----
     if has_page and any(w in q for w in PAGE_REFERENCE_WORDS):

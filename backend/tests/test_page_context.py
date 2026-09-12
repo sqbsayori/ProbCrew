@@ -145,6 +145,69 @@ def test_router_handles_short_question_with_selection() -> None:
     assert _router.route("解释", pc)[0] == "explain_selection"
 
 
+# --------------------------------------------------------------------------
+# 回归：选区残留不应劫持其他意图
+# --------------------------------------------------------------------------
+
+
+def test_selection_does_not_hijack_progress_question() -> None:
+    """★ 回归：浏览器会保留选区。
+
+    学生划过一次词之后，接下来问"我学到哪了"也带着选区。
+    早期版本只看"问题很短"就判成 explain_selection，
+    结果会拿一段无关的选中文字去回答进度问题。
+    """
+    from app.agents import _router
+
+    pc = _sample_page()
+    pc.selection = "全概率公式 P(A)=ΣP(Bi)P(A|Bi)"
+
+    for q in ("我学到哪了？", "看到哪了", "讲到哪了", "还剩多少"):
+        intent, agents, _ = _router.route(q, pc)
+        assert intent == "explain_page", f"{q!r} 被误判为 {intent}"
+        assert agents == ["page_tutor"], q
+
+
+def test_selection_does_not_hijack_page_summary() -> None:
+    """★ 回归：带选区问"这一页讲了什么"，应走整页梳理而不是解释选中。"""
+    from app.agents import _router
+
+    pc = _sample_page()
+    pc.selection = "完备事件组"
+
+    for q in ("这一页讲了什么？", "本节讲了什么", "帮我梳理一下结构", "这页的内容是什么"):
+        intent, _, _ = _router.route(q, pc)
+        assert intent == "explain_page", f"{q!r} 被误判为 {intent}"
+
+
+def test_selection_still_wins_for_real_explain_requests() -> None:
+    """修 bug 不能修过头：真正要解释选中的，仍须走 explain_selection。"""
+    from app.agents import _router
+
+    pc = _sample_page()
+    pc.selection = "贝叶斯公式由果推因"
+    for q in ("这段什么意思？", "解释一下", "为什么这样", "看不懂", "这是啥"):
+        assert _router.route(q, pc)[0] == "explain_selection", q
+
+
+def test_knowledge_question_with_stale_selection_still_goes_to_knowledge() -> None:
+    """带着残留选区问教材知识点，不应该被页面伴学截胡。"""
+    from app.agents import _router
+
+    pc = _sample_page()
+    pc.selection = "某段残留的选中文字"
+    intent, agents, _ = _router.route("什么是贝叶斯公式？", pc)
+    assert intent == "knowledge", intent
+    assert agents == ["knowledge"]
+
+
+def test_progress_words_single_source_of_truth() -> None:
+    """路由与 page_tutor 必须共用同一份 PROGRESS_WORDS，否则会出现错位。"""
+    from app.agents import _router, page_tutor
+
+    assert page_tutor.PROGRESS_WORDS is _router.PROGRESS_WORDS
+
+
 def test_router_routes_page_reference_to_page_tutor() -> None:
     from app.agents import _router
 

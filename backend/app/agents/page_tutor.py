@@ -21,6 +21,7 @@ from typing import Any
 
 from ..kernel.page_context import PageContext
 from ..kernel.specs import AgentResult, AgentSpec, RunContext
+from ._router import PROGRESS_WORDS  # 单一事实源：路由与本 Agent 必须用同一份词表
 
 SPEC = AgentSpec(
     id="page_tutor",
@@ -35,8 +36,9 @@ SPEC = AgentSpec(
     can_verify=("page_tutor",),
 )
 
-#: 问"我学到哪了"的信号词
-PROGRESS_WORDS = ("学到哪", "看到哪", "进度", "讲到哪", "还剩多少", "看了多久")
+# 问"我学到哪了"的信号词从 _router 导入（见文件头 import），
+# 不在这里重复定义 —— 路由和本 Agent 必须用同一份词表，
+# 否则会出现「路由判成 explain_selection，但 Agent 里按进度答」这类错位。
 
 #: 所有会输出公式的 Prompt 都必须带上这一条。
 #: 实测：DeepSeek 默认习惯输出 `\(...\)` 与 `\[...\]`，而前端 Markdown 渲染器
