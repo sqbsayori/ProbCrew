@@ -53,3 +53,9 @@ dist/
 .git-commit-msg.tmp
 *.tmp
 .release-notes-*.md
+
+# ===== 会话交接文档（不属于项目文档，不入库）=====
+# 这类文件是给下一次会话/下一位接手者的临时衔接材料，
+# 含本地环境细节与待决事项，不属于项目本身。
+docs/*交接*.md
+docs/*handover*.md
