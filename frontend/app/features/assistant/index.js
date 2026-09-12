@@ -42,7 +42,7 @@ const METHODS = [
     key: 'userscript',
     icon: '🐒',
     title: '第三方平台注入',
-    sub: '油猴脚本（超星 / 智慧树）',
+    sub: '油猴脚本（智慧树）',
     desc: '改不了源码的平台只能靠注入。脚本在所有 frame 各跑一份，用 postMessage 把内容汇总到顶层——这是读到 iframe 里课件的唯一办法。',
     pros: ['不用改平台源码', '@require 规避站点 CSP', '覆盖跨域 iframe'],
     cons: ['需要装 Tampermonkey', '改代码后要重新同步脚本'],
