@@ -9,7 +9,7 @@ export const FEATURES = [
   {"id": "knowledge", "dir": "knowledge", "title": "知识讲解", "icon": "📚", "route": "knowledge", "group": "学习", "order": 20, "subtitle": "检索教材 · 生成讲解 · 推荐交互动画"},
   {"id": "solver", "dir": "solver", "title": "题目讲解", "icon": "✏️", "route": "solver", "group": "学习", "order": 25, "subtitle": "逐步解题 · 独立校验 · 人机协同确认"},
   {"id": "visualize", "dir": "visualize", "title": "分布可视化", "icon": "📊", "route": "visualize", "group": "学习", "order": 30, "subtitle": "SymPy 符号推导 · 交互式 PDF/CDF · Agent 解读"},
-  {"id": "assistant", "dir": "assistant", "title": "页面助手", "icon": "🐾", "route": "assistant", "group": "资源", "order": 35, "subtitle": "悬浮球 / 页宠 · 三套投递方式 · 现场试玩"},
+  {"id": "assistant", "dir": "assistant", "title": "页面助手", "icon": "🐾", "route": "assistant", "group": "资源", "order": 35, "subtitle": "悬浮球 / 页宠 · 活体读取演示 · 两条投递路线"},
   {"id": "animations", "dir": "animations", "title": "交互动画", "icon": "🎬", "route": "animations", "group": "资源", "order": 40, "subtitle": "8 个自包含 H5 动画 · 可被 Agent 推荐与驱动"},
   {"id": "runs", "dir": "runs", "title": "运行轨迹", "icon": "🧵", "route": "runs", "group": "数据", "order": 45, "subtitle": "多 Agent 协作全过程留档与回放"},
   {"id": "analytics", "dir": "analytics", "title": "学习数据", "icon": "📈", "route": "analytics", "group": "数据", "order": 50, "subtitle": "问答记录 · 薄弱知识点 · 进度追踪"},
