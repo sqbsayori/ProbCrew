@@ -64,6 +64,12 @@
     </div>
   </noscript>
 
+  <!-- 后端地址配置块（可省略）：本页与后端同源时留空即可。
+       前后端分域部署时才需要改这里，改地址**不需要动任何 JS 源码**。 -->
+  <script>
+    window.__PSA_API__ = ''; // 例如 'https://probstat.example.edu'
+  </script>
+
   <script type="module" src="/app/bootstrap.js"></script>
 </body>
 </html>

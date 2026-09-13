@@ -276,6 +276,52 @@ def check_api_contract() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 6. 部署无关化（前端不许写死后端地址）
+# ---------------------------------------------------------------------------
+
+
+def check_deployment_agnostic() -> None:
+    """守住「换服务器不用改源码」（docs/13 §2.2 / 任务 3）。
+
+    这里校验的是**交付层**：油猴脚本、loader、SPA 的 api 客户端。
+    它们一旦写死 `http://某台机器:8000`，部署到服务器后每个学生都得改源码重装，
+    而这个错误在本地**永远测不出来**（本地恰好就是那个地址）。
+    """
+    import re
+
+    targets = [
+        ROOT / "frontend" / "widget" / "probstat-assistant.user.js",
+        ROOT / "frontend" / "widget" / "loader.js",
+        ROOT / "frontend" / "app" / "core" / "api.js",
+    ]
+    missing = [str(p.relative_to(ROOT)) for p in targets if not p.exists()]
+    if missing:
+        check(False, "交付层文件齐全", f"缺失：{missing}")
+        return
+
+    # 油猴脚本另有一份更细的检查（配置块留空、@require 相对路径）
+    try:
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from build_userscript import check_source  # type: ignore
+
+        problems = check_source(targets[0].read_text(encoding="utf-8"))
+        check(not problems, "油猴脚本不含写死的后端地址", "; ".join(problems)[:200])
+    except Exception as exc:  # noqa: BLE001
+        skip("油猴脚本地址检查", f"无法执行：{str(exc)[:120]}")
+
+    bad: list[str] = []
+    for path in targets[1:]:
+        text = path.read_text(encoding="utf-8")
+        for lineno, line in enumerate(text.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith("//") or stripped.startswith("*") or stripped.startswith("/*"):
+                continue
+            if re.search(r"https?://\d{1,3}(\.\d{1,3}){3}|https?://localhost", line, re.I):
+                bad.append(f"{path.relative_to(ROOT)}:{lineno}")
+    check(not bad, "loader / SPA 客户端不含写死的后端地址", ", ".join(bad)[:200])
+
+
+# ---------------------------------------------------------------------------
 
 
 def main() -> int:
@@ -306,6 +352,9 @@ def main() -> int:
 
     section("5. API 契约新鲜度")
     check_api_contract()
+
+    section("6. 部署无关化（前端不许写死后端地址）")
+    check_deployment_agnostic()
 
     failed = [r for r in results if not r[0]]
     print()

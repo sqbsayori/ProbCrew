@@ -18,6 +18,12 @@ backend/data/*.sqlite
 backend/data/*.sqlite-journal
 backend/data/*.db
 
+# ===== 检索模型权重（BGE-M3 等，数 GB，**绝不进仓库**）=====
+# 由 scripts/setup_models.py 下载到 backend/data/models（backend/data 本就整目录忽略）
+models/
+*.safetensors
+*.onnx
+
 # ===== 前端 =====
 node_modules/
 dist/

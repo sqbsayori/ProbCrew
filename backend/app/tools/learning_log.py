@@ -15,10 +15,18 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..config import PROJECT_ROOT
+from ..config import PROJECT_ROOT, settings
 from ..kernel.specs import tool
 
+#: 库文件位置由配置决定（`DB_PATH` / `DB_URL`），默认值与改造前一致：
+#: `backend/data/learning.sqlite`。**永远不进仓库**（.gitignore 已覆盖）。
+#: 保留模块级常量只为兼容旧引用；运行时一律走 `_db_path()`。
 DB_PATH = PROJECT_ROOT / "backend" / "data" / "learning.sqlite"
+
+
+def _db_path() -> Path:
+    """当前配置下的库文件绝对路径（改配置无需改代码）。"""
+    return settings.resolved_db_path
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS qa_log (
@@ -44,8 +52,9 @@ CREATE INDEX IF NOT EXISTS idx_qa_session ON qa_log(session_id, created_at);
 
 
 def _conn() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=5)
+    path = _db_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, timeout=5)
     conn.row_factory = sqlite3.Row
     conn.executescript(_SCHEMA)
     return conn
