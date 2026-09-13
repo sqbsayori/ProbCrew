@@ -16,6 +16,8 @@ import { byId, clear, h } from './dom.js';
 const features = new Map();
 let currentRoute = null;
 const routeListeners = [];
+/** 换页后补正"回顶部"的定时器句柄（见 navigate 末尾） */
+const resetScrollGuards = [];
 
 /**
  * 注册一个 feature。
@@ -113,6 +115,40 @@ export function navigate(route, params = {}) {
   location.hash = `#/${route}`;
   routeListeners.forEach((fn) => fn(route, params));
   bus.emit(EV.NAVIGATE, { route, params });
+
+  // 换页必须回到顶部。
+  //
+  // 不重置的话会出现一个很难自查的现象：上一页比下一页高，切页时
+  // clear(host) 把文档变短，浏览器把过大的 scrollY **钳制**到新的最大值，
+  // 于是"点开某一页"直接落在页面中下部，用户以为页面跳错了。
+  // 放在 mount 之后，保证这时文档已经是最新高度。
+  //
+  // 后两处补正：feature 挂载后常常还要异步拉数据 / 装载 iframe，文档随后
+  // 还会长高，浏览器的滚动锚定会顺势把页面推下去（实测 assistant 页被送到
+  // 905px）。用几个时间点兜住；**一旦用户自己滚动过就全部让位**，
+  // 绝不跟用户抢滚动条。
+  let userScrolled = false;
+  const markUserScroll = () => {
+    userScrolled = true;
+  };
+  for (const ev of ['wheel', 'touchmove', 'keydown']) {
+    addEventListener(ev, markUserScroll, { passive: true, once: true });
+  }
+
+  scrollToTop();
+  for (const delay of [180, 600, 1400]) {
+    resetScrollGuards.push(
+      setTimeout(() => {
+        if (!userScrolled && window.scrollY > 4) window.scrollTo(0, 0);
+      }, delay)
+    );
+  }
+}
+
+/** 回到顶部（并清掉上一页挂起的全部守卫） */
+function scrollToTop() {
+  while (resetScrollGuards.length) clearTimeout(resetScrollGuards.pop());
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
 }
 
 export const getRoute = () => currentRoute;

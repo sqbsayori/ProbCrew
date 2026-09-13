@@ -193,11 +193,78 @@ def _dedupe(items: Iterable[str]) -> list[str]:
     return out
 
 
+_NUM = r"-?\d+(?:\.\d+)?"
+
+#: 中文数词 → 数值。0–99 足够覆盖分布参数的实际取值。
+_CN_DIGIT = {"零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4,
+             "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+_CN_TEN = {"十": 10, "百": 100}
+
+
+def _cn_number(text: str) -> float | None:
+    """把纯粹的中文数词（三 / 十 / 十二 / 二十 / 二十五 / 一百）转成数值。
+
+    只处理"整串都是数词"的情况；像「三张」这种量词短语返回 None，
+    避免把「抽5张」里的数词误当成分布参数。
+    """
+    s = (text or "").strip()
+    if not s:
+        return None
+    if all(c in _CN_DIGIT for c in s):
+        return float("".join(str(_CN_DIGIT[c]) for c in s))
+    total, rest = 0, s
+    for unit, mult in _CN_TEN.items():
+        if unit in rest:
+            head, _, tail = rest.partition(unit)
+            head_val = _CN_DIGIT.get(head, 1) if len(head) <= 1 else None
+            if head_val is None:
+                return None
+            tail_val = _cn_number(tail) if tail else 0.0
+            if tail_val is None:
+                return None
+            total += head_val * mult + int(tail_val)
+            rest = ""
+            break
+    if rest:
+        return None
+    return float(total)
+
+
+def _pick_number(query: str, patterns: tuple[str, ...]) -> float | None:
+    """按顺序试各个模式，返回第一个成功抽出的数值。
+
+    捕获组里既可能是阿拉伯数字（"参数为 3"）也可能是中文数词（"参数是三"），
+    两种都要能读出来 —— 早期版本只把阿拉伯数字交给 `float()`，
+    中文数词会静默丢弃，于是参数悄悄退回默认值、画出一张错参数的图。
+    """
+    for pattern in patterns:
+        m = re.search(pattern, query)
+        if not m:
+            continue
+        for group in m.groups():
+            if not group:
+                continue
+            value = _cn_number(group)
+            if value is None:
+                try:
+                    value = float(group)
+                except (TypeError, ValueError):
+                    continue
+            return value
+        # 命中了模式但没拿到可用的数 —— 继续试下一个模式
+    return None
+
+
 def extract_distribution(query: str) -> tuple[str | None, dict[str, float]]:
     """从自然语言里抽取分布类型与参数，例如「正态分布 N(0,1)」「泊松 λ=3」。
 
     这是"规则优先"的另一个落点：分布名与参数都能用正则稳定抽出，
     没必要让 LLM 猜（猜错会直接导致算错）。
+
+    支持的自然语言写法（缺一会导致退回默认参数，从而画出**错误参数的图**）：
+        λ=3 / λ＝3 / λ 为 3 / 参数为 3 / 参数是 3 / 均值是 3 / 期望为 3 / 取 3
+        P(3) / 泊松分布(3) / X～P(3) / X~Poisson(3) / λ取3 / 参数λ=3
+        中文数词：参数为三 / λ为三
     """
     q = (query or "").lower()
     aliases: dict[str, str] = {
@@ -220,14 +287,25 @@ def extract_distribution(query: str) -> tuple[str | None, dict[str, float]]:
 
     params: dict[str, float] = {}
 
-    def num(pattern: str) -> float | None:
-        m = re.search(pattern, q)
-        if not m:
-            return None
-        try:
-            return float(m.group(1))
-        except (TypeError, ValueError):
-            return None
+    # 参数抽取的三层模式（顺序 = 优先级，越靠前越明确）：
+    #   1) 显式赋值    λ=3 / λ ：3
+    #   2) 自然语言    λ为3 / 参数为3 / 均值为三
+    #   3) 位置写法    P(3) / 泊松分布(3) / X～P(3)
+    # 位置写法必须限定"分布名/记号 紧跟左括号"，否则会把
+    # 「一副扑克牌抽5张…其中恰好2张是A的概率」里的 (…) 误当参数。
+    def pats(symbols: str, natural: str, dist_alts: str) -> tuple[str, ...]:
+        return (
+            # 1) 记号写法：λ=3 / λ＝3 / λ:3 / λ取3 / λ为3 / λ 3 / n=10
+            rf"[{symbols}]\s*(?:取)?\s*(?:为|是|等于|:：|\s)*[=＝]?\s*({_NUM})",
+            # 2) 自然语言：参数为3 / 参数是3 / 均值是3 / 参数三 / 参数 3
+            rf"(?:{natural})\s*(?:为|是|取|等于|:：|\s)*({_NUM}|[零一二两三四五六七八九十百]+)",
+            # 3) 反过来写：参数 λ=3（由 1 覆盖）/ 参数代入 3
+            rf"(?:参数|均值|期望)\s*[{symbols}]?\s*(?:为|是|取|等于|\s)*({_NUM}|[零一二两三四五六七八九十百]+)",
+            # 4) 位置写法：P(3) / 泊松分布(3) / X～P(3)
+            rf"(?:{dist_alts})\s*(?:分布)?\s*[（(]\s*({_NUM})\s*[)）]",
+            # 4b) X～P(3) / X~Poisson(3)（记号在分布名之后）
+            rf"[～~]\s*[A-Za-z]*\s*[（(]\s*({_NUM})\s*[)）]",
+        )
 
     if dist == "normal":
         m = re.search(r"[nN]\s*\(\s*(-?\d+(?:\.\d+)?)\s*[,，]\s*(-?\d+(?:\.\d+)?)\s*\)", q)
@@ -235,29 +313,29 @@ def extract_distribution(query: str) -> tuple[str | None, dict[str, float]]:
             params["mu"] = float(m.group(1))
             params["sigma"] = abs(float(m.group(2))) or 1.0
         else:
-            mu = num(r"[μu]\s*[=＝]\s*(-?\d+(?:\.\d+)?)")
-            sigma = num(r"[σs]\s*(?:\^?2)?\s*[=＝]\s*(-?\d+(?:\.\d+)?)")
+            mu = _pick_number(q, pats("μu", "均值|期望|均数", "正态|高斯|normal|N"))
+            sigma = _pick_number(q, pats("σs", "标准差|均方差", "正态|高斯|normal|N"))
             if mu is not None:
                 params["mu"] = mu
             if sigma is not None:
-                params["sigma"] = sigma
+                params["sigma"] = abs(sigma) or 1.0
     elif dist == "binomial":
-        nn = num(r"[nN]\s*[=＝]\s*(\d+(?:\.\d+)?)")
-        pp = num(r"[pP]\s*[=＝]\s*(0?\.\d+|\d+(?:\.\d+)?)")
+        nn = _pick_number(q, pats("nN", "试验次数|次数", "二项|binomial|B"))
+        pp = _pick_number(q, pats("pP", "概率|成功概率", "二项|binomial|B"))
         if nn is not None:
             params["n"] = nn
         if pp is not None:
             params["p"] = pp
     elif dist == "poisson":
-        ll = num(r"[λl]\s*[=＝]\s*(\d+(?:\.\d+)?)")
+        ll = _pick_number(q, pats("λl", "参数|均值|期望|强度", "泊松|poisson|P"))
         if ll is not None:
             params["lambda"] = ll
     elif dist == "exponential":
-        ll = num(r"[λl]\s*[=＝]\s*(\d+(?:\.\d+)?)")
+        ll = _pick_number(q, pats("λl", "参数|速率|强度|均值", "指数|exponential|E"))
         if ll is not None:
             params["lambda"] = ll
     elif dist == "geometric":
-        pp = num(r"[pP]\s*[=＝]\s*(0?\.\d+|\d+(?:\.\d+)?)")
+        pp = _pick_number(q, pats("pP", "概率|成功概率", "几何|geometric|G"))
         if pp is not None:
             params["p"] = pp
     elif dist == "uniform":
@@ -266,9 +344,14 @@ def extract_distribution(query: str) -> tuple[str | None, dict[str, float]]:
             lo, hi = float(m.group(1)), float(m.group(2))
             if hi > lo:
                 params["a"], params["b"] = lo, hi
+        else:
+            lo = _pick_number(q, pats("ab", "下限|起点", "均匀|uniform|U"))
+            hi = _pick_number(q, pats("ab", "上限|终点", "均匀|uniform|U"))
+            if lo is not None and hi is not None and hi > lo:
+                params["a"], params["b"] = lo, hi
     elif dist in ("gamma", "beta"):
-        al = num(r"[αa]\s*[=＝]\s*(\d+(?:\.\d+)?)")
-        be = num(r"[βb]\s*[=＝]\s*(\d+(?:\.\d+)?)")
+        al = _pick_number(q, pats("αa", "形状参数|参数α|alpha", "伽马|贝塔|gamma|beta|Γ"))
+        be = _pick_number(q, pats("βb", "尺度参数|速率参数|参数β|beta参数", "伽马|贝塔|gamma|beta|Γ"))
         if al is not None:
             params["alpha"] = al
         if be is not None:

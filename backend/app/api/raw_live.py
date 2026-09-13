@@ -2,7 +2,7 @@
 
 为什么需要这个模块
 ----------------
-团队要的是"在 `F:\\学习资料\\大创\\动画` 那些页面上看到悬浮窗"。有三条路：
+团队要的是"在团队那 8 个原始动画页面上看到悬浮窗"。有三条路：
 
 1. **直接改那 8 个 html** —— ❌ 违背"动画文件一字不改"的原则。
    它们要能离线、能单独分发、能塞进数字教材，不能被我们污染。
@@ -107,10 +107,20 @@ async def raw_live_page(filename: str) -> HTMLResponse:
 
 @router.get("/api/raw-live/list", summary="可注入的原始动画清单")
 async def raw_live_list() -> dict[str, Any]:
-    """列出 `/raw-live/` 下可访问的页面，方便前端做入口。"""
+    """列出 `/raw-live/` 下可访问的页面，方便前端做入口。
+
+    注意：**不回传绝对路径**。这个接口以前会返回 `str(RAW_ANIMATIONS_DIR)`，
+    等于把服务器的目录结构 + 用户名暴露给任何访问者；对分发包来说更是
+    毫无用处的信息。改用符号名 + 描述性 hint。
+    """
     base = RAW_ANIMATIONS_DIR
     if not base.is_dir():
-        return {"available": False, "dir": str(base), "items": []}
+        return {
+            "available": False,
+            "source": "原始动画文件夹",
+            "hint": "未在预期位置找到动画文件夹；分发包里它应位于 frontend/assets/animations/_raw",
+            "items": [],
+        }
 
     items = [
         {
@@ -123,7 +133,7 @@ async def raw_live_list() -> dict[str, Any]:
     ]
     return {
         "available": True,
-        "dir": str(base),
+        "source": "原始动画文件夹",
         "count": len(items),
         "items": items,
         "note": "这些页面由后端在响应时注入悬浮窗，磁盘上的原始文件未被修改。",

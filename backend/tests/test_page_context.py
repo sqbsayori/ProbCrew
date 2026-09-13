@@ -208,6 +208,63 @@ def test_progress_words_single_source_of_truth() -> None:
     assert page_tutor.PROGRESS_WORDS is _router.PROGRESS_WORDS
 
 
+# --------------------------------------------------------------------------
+# 分布参数抽取（回归：参数读丢了就会画出**错误参数的图**）
+# --------------------------------------------------------------------------
+def test_extract_distribution_reads_natural_language_params() -> None:
+    """学生不会按 λ=3 的格式提问，自然语言写法必须也能读出来。
+
+    回归背景：早期只认 `λ=3`，「参数为 3」会把 λ 静默退回默认值 4，
+    于是 solver 算的是 λ=3、visualizer 画的是 λ=4，同一页答案自相矛盾。
+    """
+    from app.agents import _router
+
+    cases = {
+        "设 X 服从参数为 3 的泊松分布，求 P(X=2)，保留 4 位小数": ("poisson", 3.0),
+        "X 服从泊松分布，参数为 5，求 P(X=1)": ("poisson", 5.0),
+        "泊松分布 λ=3，求 P(X=2)": ("poisson", 3.0),
+        "泊松分布 λ为2 求P(X=1)": ("poisson", 2.0),
+        "泊松分布，λ 取 4": ("poisson", 4.0),
+        "X~Poisson(6)": ("poisson", 6.0),
+        "一指数分布参数是三，求期望": ("exponential", 3.0),
+        "指数分布，参数为 0.5，求期望": ("exponential", 0.5),
+    }
+    for query, (want_dist, want_lambda) in cases.items():
+        dist, params = _router.extract_distribution(query)
+        assert dist == want_dist, f"{query} -> {dist}"
+        assert params.get("lambda") == want_lambda, f"{query} -> {params}"
+
+
+def test_extract_distribution_reads_normal_params() -> None:
+    from app.agents import _router
+
+    dist, params = _router.extract_distribution("正态分布 N(0,1) 的密度函数")
+    assert (dist, params) == ("normal", {"mu": 0.0, "sigma": 1.0})
+
+    dist, params = _router.extract_distribution("均值是 2 方差是 4 的正态分布")
+    assert dist == "normal"
+    assert params["mu"] == 2.0
+    assert params["sigma"] == 2.0  # 方差换算成标准差
+
+    dist, params = _router.extract_distribution("二项分布 n=10 p=0.3 的期望")
+    assert dist == "binomial"
+    assert params == {"n": 10.0, "p": 0.3}
+
+
+def test_extract_distribution_does_not_invent_params() -> None:
+    """没提参数的题目不能凭空抽出参数 —— 否则比读丢参数更糟。"""
+    from app.agents import _router
+
+    # 没有分布名 → 不猜
+    assert _router.extract_distribution("一副扑克牌抽5张，其中恰好2张是A的概率是多少？") == (None, {})
+    assert _router.extract_distribution("概率论里什么是条件概率") == (None, {})
+
+    # 有分布名但没给参数 → 参数留空，由调用方决定默认值
+    dist, params = _router.extract_distribution("泊松分布有哪些性质")
+    assert dist == "poisson"
+    assert params == {}
+
+
 def test_router_routes_page_reference_to_page_tutor() -> None:
     from app.agents import _router
 
