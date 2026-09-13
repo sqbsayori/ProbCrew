@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     # 不联网下载；缺失时 `embedding`/`reranker` 会显式报 `available=False`，
     # 检索自动退回 BM25 —— 不允许静默降级成"看起来在跑向量"。
     kb_backend: str = "auto"  # auto | hybrid | bm25
+    #: 语料两来源（docs/13 §1.2）：仓库内**示例语料**（L0，可公开）
+    #: + 仓库外**正式语料**（L1 教材，仅校内，绝不进仓库）。
+    #: 后者默认指向 `backend/data/corpus/`（该目录已被 .gitignore 覆盖）。
+    corpus_dir: str = "backend/data/corpus"
     embedding_model: str = "BAAI/bge-m3"
     embedding_dim: int = 1024
     #: 向量层的候选截断：按**排名**取前 N，而不是按绝对余弦阈值。
@@ -119,6 +123,16 @@ class Settings(BaseSettings):
             p = Path(self.models_dir.strip())
             return p if p.is_absolute() else (PROJECT_ROOT / p)
         return Path.home() / ".cache" / "huggingface" / "hub"
+
+    @property
+    def resolved_corpus_dir(self) -> Path:
+        """仓库外正式语料目录（L1 教材）的绝对路径。
+
+        默认 `backend/data/corpus/`：位于仓库内但**整目录被 .gitignore 覆盖**，
+        所以"放这儿"既方便部署时同步，又不会误提交进公开仓库（docs/13 §1.1）。
+        """
+        p = Path(self.corpus_dir.strip() or "backend/data/corpus")
+        return p if p.is_absolute() else (PROJECT_ROOT / p)
 
     @property
     def cors_origin_list(self) -> list[str]:

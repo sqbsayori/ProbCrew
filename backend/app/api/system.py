@@ -72,6 +72,8 @@ async def health(request: Request) -> dict[str, Any]:
             "chapters": len(kb.get("chapters", [])),
             "path": kb.get("path", ""),
             "exists": kb.get("exists", False),
+            # 语料两来源体检：教材（L1）放进来没有、放了几份
+            "corpus": kb.get("corpus", {}),
         },
         # 检索层状态：部署后最常见的疑问是"向量/重排到底生效了没有"
         "retrieval": kb.get("retrieval", {}),

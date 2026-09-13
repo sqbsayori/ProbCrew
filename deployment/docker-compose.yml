@@ -5,8 +5,10 @@
 #     上线前必须处理（详见 docs/07-部署与分发.md §4 与 原型声明.md）：
 #       1. 没有鉴权 —— 任何人都能调用
 #       2. 没有限流 —— 一个脚本就能刷光 API 额度
-#       3. CORS 是 *  —— 必须在 main.py 里收窄
-#       4. 运行记录在内存 —— 重启即丢
+#       3. 运行记录在内存 —— 重启即丢
+#     关于 CORS：已经**不需要改代码**了，在 .env 里设 CORS_ORIGINS 即可：
+#       CORS_ORIGINS=https://probstat.example.edu,https://a.example.edu
+#     线上务必收窄（默认 `*` 只适合本地/内网演示）。详见 docs/13 §2.3。
 #
 #  用法：
 #     cd ProbCrew

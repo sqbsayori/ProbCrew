@@ -245,9 +245,11 @@ def render_markdown(report: dict[str, dict], questions: list[dict[str, str]], k:
     lines.append("")
     lines.append(f"> 生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  ")
     lines.append(f"> 题集：`scripts/retrieval_questions.tsv`（{len(questions)} 题）  ")
+    corpus = kb_search.corpus_info()
     lines.append(
-        f"> 语料：`{kb_search.KB_PATH.relative_to(ROOT).as_posix()}`"
-        f"（{len(kb_search._index()['docs'])} 个片段）"
+        f"> 语料：`{kb_search.KB_DIR.relative_to(ROOT).as_posix()}`"
+        f"（{len(kb_search._index()['docs'])} 个片段；"
+        f"示例语料 {corpus['bundled_files']} 份 + 教材语料 {corpus['corpus_files']} 份）"
     )
     lines.append("")
     lines.append("## 一、这一轮到底跑的是什么（先看这里，再看数字）")

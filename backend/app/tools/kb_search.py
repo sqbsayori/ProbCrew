@@ -30,7 +30,9 @@ from ..config import PROJECT_ROOT, settings
 from ..kernel.specs import tool
 from . import embedding, reranker
 
-KB_PATH = PROJECT_ROOT / "backend" / "knowledge_base" / "probstat.md"
+#: 仓库内**示例语料**目录（L0，可公开）。多份 .md 会被合并进同一索引。
+#: 正式教材（L1）放仓库外：见 `settings.resolved_corpus_dir`（docs/13 §1.2）。
+KB_DIR = PROJECT_ROOT / "backend" / "knowledge_base"
 
 #: 融合权重。BM25 占 0.5 是有意的：公式密集语料里精确匹配很值钱。
 _W_BM25 = 0.5
@@ -126,43 +128,122 @@ def _grams(text: str) -> list[str]:
 
 
 @lru_cache(maxsize=4)
-def _index_for(signature: tuple[str, int]) -> dict[str, Any]:
+def _index_for(signature: tuple[str, tuple[tuple[str, int, str], ...]]) -> dict[str, Any]:
     """构建 BM25 统计量（词法部分，便宜）。
 
-    `signature` 是 (语料路径, mtime_ns)：文件没动就直接复用缓存，
-    文件一动就自动重建 —— 不需要任何人记得"改完语料要重启"。
+    `signature` 的第 2 段是**逐文件**的 `(绝对路径, mtime_ns, 来源)` 列表：
+    文件没动就直接复用缓存，任何一份语料一变就自动重建 ——
+    不需要任何人记得"改完语料要重启"。
 
     **向量部分不在这里**：编码整个语料要几百毫秒（CPU 上 BGE-M3 更慢），
     而每次查询都会调 `_index()`；把编码放进这个缓存会导致
     "每问一次就重编码一遍语料"（实测让评测从 20s 涨到 2min）。
-    所以向量单独用 `_doc_vectors()` 按同一签名缓存。
+    所以向量单独用 `_doc_vector_cache()` 按同一签名缓存。
     """
-    path_str, _mtime = signature
-    path = Path(path_str)
-    if not path.exists():
-        return {"docs": [], "idf": {}, "avg_len": 1.0, "signature": signature}
-
-    sections = _split_sections(path.read_text(encoding="utf-8"))
+    files = signature[1]
     docs: list[dict[str, Any]] = []
     df: Counter[str] = Counter()
-    for i, sec in enumerate(sections):
-        grams = _grams(sec["heading"] + "\n" + sec["body"])
-        tf = Counter(grams)
-        docs.append({**sec, "idx": i, "tf": tf, "len": max(len(grams), 1)})
-        df.update(set(grams))
+
+    for path_str, _mtime, source in files:
+        path = Path(path_str)
+        if not path.exists():
+            continue
+        raw = path.read_text(encoding="utf-8")
+        for sec in _split_sections(raw):
+            grams = _grams(sec["heading"] + "\n" + sec["body"])
+            tf = Counter(grams)
+            # idx 用"加入顺序"而不是文件内下标：跨文件也必须唯一
+            docs.append(
+                {
+                    **sec,
+                    "idx": len(docs),
+                    "tf": tf,
+                    "len": max(len(grams), 1),
+                    "source": source,
+                    "rel_path": _rel_to_root(path),
+                }
+            )
+            df.update(set(grams))
 
     total = max(len(docs), 1)
     idf = {g: math.log((total + 1) / (c + 1)) + 1.0 for g, c in df.items()}
-    avg_len = sum(d["len"] for d in docs) / total
+    avg_len = sum(d["len"] for d in docs) / total if docs else 1.0
 
     return {"docs": docs, "idf": idf, "avg_len": avg_len, "signature": signature}
 
 
+def _rel_to_root(path: Path, prefix: str = "corpus") -> str:
+    """给出处用的相对路径；**仓库外**的路径只留文件名，不泄露绝对路径。
+
+    仓库外语料是 L1（校内教材），但报告/接口里回传服务器绝对路径是团队明令避免的
+    （见提交 de1880a「/api/raw-live/list 不再回传服务器绝对路径」）。
+    """
+    try:
+        return path.resolve().relative_to(PROJECT_ROOT).as_posix()
+    except ValueError:
+        return f"{prefix}/{path.name}"
+
+
+def _corpus_files() -> list[tuple[str, int, str]]:
+    """收集语料两来源，返回 `[(绝对路径, mtime_ns, 来源标签), ...]`。
+
+    * **仓库内示例语料**（L0，可公开）：`backend/knowledge_base/*.md`
+    * **仓库外正式语料**（L1 教材，仅校内）：`CORPUS_DIR/*.md`（递归）
+
+    两来源并存是 docs/13 §1.2 的硬要求：教材一到就能直接放进去用，
+    **不需要改代码**；同时示例语料保证仓库 clone 下来零配置可检索。
+    排序固定（内 → 外，文件名字典序），保证索引与出处可复现。
+    """
+    files: list[tuple[str, int, str]] = []
+    for path in sorted(KB_DIR.glob("*.md")):
+        files.append((str(path), path.stat().st_mtime_ns, "示例语料"))
+    corpus_dir = settings.resolved_corpus_dir
+    if corpus_dir.is_dir():
+        for path in sorted(corpus_dir.rglob("*.md")):
+            files.append((str(path), path.stat().st_mtime_ns, "教材语料"))
+    return files
+
+
 def _index() -> dict[str, Any]:
-    """取当前语料对应的索引。文件 mtime 变了就自动重建（无需重启）。"""
-    if not KB_PATH.exists():
-        return _index_for((str(KB_PATH), -1))
-    return _index_for((str(KB_PATH), KB_PATH.stat().st_mtime_ns))
+    """取当前语料对应的索引（两来源合并）。文件 mtime 变了就自动重建。
+
+    刻意**不把 mtime 塞进 lru_cache 的键里当"版本号"**：每份文件各自的 mtime
+    组成的元组本身就是签名，这样"改了哪一份"和"加了一份新文件"都能被感知。
+    """
+    return _index_for((str(KB_DIR), tuple(_corpus_files())))
+
+
+def corpus_info() -> dict[str, Any]:
+    """语料两来源的体检结果（health / 前端"知识库有多少内容"用）。"""
+    files = _corpus_files()
+    by_source: dict[str, int] = {}
+    for _p, _m, source in files:
+        by_source[source] = by_source.get(source, 0) + 1
+    docs = _index()["docs"]
+    corpus_dir = settings.resolved_corpus_dir
+    return {
+        "bundled_dir": _rel_to_root(KB_DIR, prefix="knowledge_base"),
+        "bundled_files": by_source.get("示例语料", 0),
+        "corpus_dir": _rel_to_root(corpus_dir) if _is_inside_repo(corpus_dir) else "(仓库外)",
+        "corpus_dir_exists": corpus_dir.is_dir(),
+        "corpus_files": by_source.get("教材语料", 0),
+        "sections": len(docs),
+        "by_source": by_source,
+        "hint": (
+            ""
+            if by_source.get("教材语料")
+            else f"尚未放入正式教材语料。把教材转成 Markdown（保留 # chXX / ## 小节）"
+            f"放进配置的 CORPUS_DIR 即可，无需改代码。"
+        ),
+    }
+
+
+def _is_inside_repo(path: Path) -> bool:
+    try:
+        path.resolve().relative_to(PROJECT_ROOT)
+        return True
+    except ValueError:
+        return False
 
 
 _doc_vectors: tuple[tuple[str, int], list[list[float]]] | None = None
@@ -332,7 +413,7 @@ def search_with_trace(
         "query": query,
         "top_k": top_k,
         "corpus_sections": len(docs),
-        "corpus_path": str(KB_PATH),
+        "corpus": corpus_info(),
         "stages": [],
         "degraded": [],
         "embedding": emb_status,
@@ -445,6 +526,10 @@ def search_with_trace(
                     "rerank": round(float(rerank_map[doc_idx]), 4) if doc_idx in rerank_map else None,
                 },
                 "source": "hybrid" if use_vector else "bm25",
+                # 语料来源（示例语料 / 教材语料）——与 `source`（检索方式）区分开，
+                # `source` 是早先就有的字段，语义不能改
+                "corpus_source": doc.get("source", ""),
+                "corpus_file": doc.get("rel_path", ""),
             }
         )
 
@@ -493,11 +578,14 @@ async def kb_search(*, ctx: Any = None, query: str, top_k: int = 4) -> dict[str,
 async def kb_stats(*, ctx: Any = None) -> dict[str, Any]:
     docs = _index()["docs"]
     chapters = sorted({d["chapter"] for d in docs if d["chapter"]})
+    corpus = corpus_info()
     return {
-        "path": str(KB_PATH),
-        "exists": KB_PATH.exists(),
+        # 兼容旧字段：path 指仓库内示例语料，exists 表示"至少有语料可检索"
+        "path": corpus["bundled_dir"],
+        "exists": bool(docs),
         "section_count": len(docs),
         "chapters": chapters,
+        "corpus": corpus,
         "retrieval": {
             "embedding": embedding.status(),
             "reranker": reranker.status(),
