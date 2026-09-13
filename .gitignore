@@ -18,6 +18,25 @@ backend/data/*.sqlite
 backend/data/*.sqlite-journal
 backend/data/*.db
 
+# ===== 检索模型权重（BGE-M3 等，数 GB，**绝不进仓库**）=====
+# 由 scripts/setup_models.py 下载到 backend/data/models（backend/data 本就整目录忽略）
+models/
+*.safetensors
+*.onnx
+
+# ===== 仓库外正式语料（L1 教材，仅校内，**绝不进公开仓库**）=====
+# CORPUS_DIR 默认指向这里（config.py / .env.example 都这么写）。
+# 教材 Markdown 丢进 backend/data/corpus/ 即生效；该目录只保留 .gitkeep，
+# 其余内容一律忽略 —— 否则 docs/13 §1.1 的"绝不进仓库"就是一句空话。
+backend/data/corpus/*
+!backend/data/corpus/.gitkeep
+
+# ===== 题目库（不敏感，但**必须入库**）=====
+# 批改闭环依据"已核验的标准答案"，题库就是这份依据，所以要能随代码分发。
+# 注意：这里放的是**自编题**（含标准解与典型错答）；真实考试题（L1）仍属校内数据，不入库。
+!backend/data/question_bank/
+!backend/data/question_bank/*.json
+
 # ===== 前端 =====
 node_modules/
 dist/
@@ -53,6 +72,8 @@ dist/
 .git-commit-msg.tmp
 *.tmp
 .release-notes-*.md
+# 本地草稿（PR 说明等），写给自己看的，不入库
+.draft-*.md
 
 # ===== 会话交接文档（不属于项目文档，不入库）=====
 # 这类文件是给下一次会话/下一位接手者的临时衔接材料，

@@ -32,12 +32,32 @@
       return all[all.length - 1];
     })();
 
-  /** 后端地址：优先 data-api，其次与 loader.js 同源 */
+  /** 后端地址（部署无关化：不写死任何地址）
+   *
+   *  顺序：① `data-api` 属性 → ② `window.__PSA_API__` 配置块 → ③ 与 loader.js 同源
+   *       → ④ **本页同源**（`location.origin`，最后兜底）
+   *
+   *  为什么 ③ 是主路径：loader.js 本身就由后端托管，所以"脚本从哪来"= 后端在哪，
+   *  换机器/换域名/换端口都不用改任何一行代码。
+   *  为什么保留 ④：万一页面把脚本内联进来（此时拿不到 script.src），
+   *  同源仍然是最合理的猜测；猜错的表现是请求打到自己而不是后端（见 `_test_deploy.mjs`）。
+   */
   function resolveBase() {
     var explicit = script && script.getAttribute('data-api');
     if (explicit) return explicit.replace(/\/+$/, '');
+
+    var fromConfig = window.__PSA_API__;
+    if (typeof fromConfig === 'string' && fromConfig) return fromConfig.replace(/\/+$/, '');
+
     try {
       if (script && script.src) return new URL(script.src).origin;
+    } catch (e) {
+      /* 忽略：继续兜底 */
+    }
+    try {
+      if (location.protocol === 'http:' || location.protocol === 'https:') {
+        return location.origin;
+      }
     } catch (e) {
       /* 忽略 */
     }
@@ -47,6 +67,15 @@
   var BASE = resolveBase();
   var AUTO_OPEN = script && script.getAttribute('data-auto-open') === 'true';
   var SKIN = (script && script.getAttribute('data-skin')) || 'pet';
+
+  if (!BASE) {
+    // 失败必须显式：宁可报错，也不要用一个"看起来能用"的空地址去猜后端
+    console.error(
+      '[伴学助手] 无法确定后端地址，未启动。请给 loader.js 加上 data-api：\n' +
+        '  <script src="http://<后端>/widget/loader.js" data-api="http://<后端>"></script>'
+    );
+    return;
+  }
 
   /**
    * 必须按依赖顺序加载。
