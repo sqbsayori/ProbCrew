@@ -101,6 +101,29 @@
  * 活体探针：左 iframe + 右读取结果
  * ---------------------------------------------------------------- */
 
+/* 关键：两个 iframe 都必须关掉浏览器的"滚动锚定"（scroll anchoring）。
+ *
+ * 现象：页面加载后自动滚到中下部（实测 scrollY≈905，顶部 hero 完全看不见），
+ * 而没有任何脚本调用 scrollTo / scrollIntoView（CDP 挂钩验证过）。
+ * 根因是 Chrome 的滚动锚定：iframe 从 about:blank 变成真实内容时，
+ * 文档高度突然长高（2915 → 3444），浏览器为了"保持可见内容不动"
+ * 自己滚了一段，把用户直接送到 iframe 位置。
+ *
+ * overflow-anchor:none 明确告诉浏览器"这里的加载不要动我的滚动位置"。
+ * 这是浏览器行为，不是代码 bug，所以只能从 CSS 侧关掉。
+ */
+.as-frame,
+.as-probe-frame {
+  overflow-anchor: none;
+}
+.as-frame-box,
+.as-probe-frame-box,
+.as-probe,
+.as-play-bar,
+.as-play-label-row {
+  overflow-anchor: none;
+}
+
 .as-probe {
   display: grid;
   grid-template-columns: minmax(0, 320px) minmax(0, 1fr);

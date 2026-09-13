@@ -237,5 +237,68 @@ for (const f of features) {
   host.remove();
 }
 
-console.log(failed === 0 ? `\n全部通过（${features.length}/${features.length}）` : `\n${failed} 个页面失败`);
-process.exit(failed === 0 ? 0 : 1);
+console.log(failed === 0 ? `\n全部页面通过（${features.length}/${features.length}）` : `\n${failed} 个页面失败`);
+
+/* ------------------------------------------------------------------ *
+ * 回归：换页必须回到顶部
+ * ------------------------------------------------------------------ *
+ * 症状（用户实际报过）：点侧栏「页面助手」，页面直接落在中下部的试玩 iframe 上，
+ * 顶部 hero 完全看不见。原因有两个：
+ *   1. router.navigate() 从来没有重置过滚动位置；
+ *   2. iframe 从 about:blank 变成真实内容时文档长高，浏览器"滚动锚定"顺势推一把。
+ * 这里把两件事都钉住，避免以后又被改回去。
+ */
+console.log('\n=== 回归：换页回到顶部 ===');
+
+const shell = new Map();
+for (const id of ['nav', 'view-host', 'pageTitle', 'pageSub']) shell.set(id, new StubNode('div'));
+globalThis.document.getElementById = (id) => shell.get(id) || null;
+
+const scrollCalls = [];
+globalThis.scrollTo = (...args) => scrollCalls.push(args);
+globalThis.addEventListener = () => {};
+globalThis.setTimeout = (fn) => { fn(); return 0; }; // 立刻执行补正的守卫
+
+let scrollFailed = 0;
+const check2 = (name, fn) => {
+  try {
+    fn();
+    console.log(`  ✔ ${name}`);
+  } catch (err) {
+    scrollFailed++;
+    console.log(`  ✘ ${name}\n      ${err.message}`);
+  }
+};
+
+const router = await import('./core/router.js');
+const assistantMod = await import('./features/assistant/index.js');
+const emptyMod = { mount: () => {}, unmount: () => {} };
+
+check2('navigate() 会把滚动位置归零', () => {
+  scrollCalls.length = 0;
+  router.register({ id: 'zz-test', title: '测试页', route: 'zz-test', order: 999 }, emptyMod);
+  router.navigate('zz-test');
+  const ok = scrollCalls.some((a) => {
+    const arg = a[0];
+    return arg && typeof arg === 'object' && arg.top === 0;
+  });
+  if (!ok) throw new Error(`没有以 top:0 调用 scrollTo，实际调用：${JSON.stringify(scrollCalls)}`);
+});
+
+check2('assistant 试玩/探针 iframe 关闭了滚动锚定', () => {
+  const css = readFileSync(join(HERE, 'features', 'assistant', 'styles.css'), 'utf8');
+  if (!/overflow-anchor:\s*none/.test(css)) {
+    throw new Error('styles.css 里没有 overflow-anchor: none —— iframe 加载会把页面推下去');
+  }
+  // 两个 iframe 的类名都必须在关闭列表里
+  for (const cls of ['.as-frame', '.as-probe-frame']) {
+    const block = css.split(cls)[1] || '';
+    if (!/overflow-anchor:\s*none/.test(block.slice(0, 200))) {
+      throw new Error(`${cls} 没有关掉滚动锚定`);
+    }
+  }
+});
+
+console.log(scrollFailed === 0 ? '\n回归检查通过' : `\n${scrollFailed} 项回归检查失败`);
+process.exit(failed === 0 && scrollFailed === 0 ? 0 : 1);
+
