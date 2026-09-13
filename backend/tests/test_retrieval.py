@@ -206,12 +206,14 @@ def test_rrf_is_scale_invariant() -> None:
 
 
 def test_index_rebuilds_when_corpus_changes(tmp_path: Path, monkeypatch) -> None:
-    """改了语料不重启也能生效（索引缓存以 mtime 为签名）。"""
+    """改了语料不重启也能生效（索引缓存以各文件 mtime 为签名）。"""
     from app.tools import kb_search
 
-    fake = tmp_path / "kb.md"
+    bundled = tmp_path / "bundled"
+    bundled.mkdir()
+    fake = bundled / "kb.md"
     fake.write_text("# ch01 测试\n\n## 苹果\n\n苹果的期望是 1。\n", encoding="utf-8")
-    monkeypatch.setattr(kb_search, "KB_PATH", fake)
+    monkeypatch.setattr(kb_search, "KB_DIR", bundled)
     kb_search.reset_index()
 
     hits, _ = kb_search.search_with_trace("苹果", top_k=3)
@@ -226,14 +228,106 @@ def test_index_rebuilds_when_corpus_changes(tmp_path: Path, monkeypatch) -> None
 
 
 def test_missing_corpus_is_reported_not_crashed(tmp_path: Path, monkeypatch) -> None:
+    """语料目录为空时必须如实说"没东西可检索"，而不是崩或者瞎返回。"""
     from app.tools import kb_search
 
-    monkeypatch.setattr(kb_search, "KB_PATH", tmp_path / "nope.md")
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    monkeypatch.setattr(kb_search, "KB_DIR", empty)
     kb_search.reset_index()
     hits, trace = kb_search.search_with_trace("任意问题")
     assert hits == []
     assert trace["corpus_sections"] == 0
     kb_search.reset_index()
+
+
+# --------------------------------------------------------------------------
+# 语料两来源（仓库内示例 + 仓库外教材）
+# --------------------------------------------------------------------------
+
+
+def test_external_corpus_is_indexed_and_tagged(tmp_path: Path, monkeypatch) -> None:
+    """把教材语料丢进 CORPUS_DIR 就能检索到，且出处标明来自哪一来源。
+
+    这是 docs/13 §1.2 的核心要求：教材（L1）不进仓库，但放进去**不用改代码**。
+    """
+    from app.config import settings
+    from app.tools import kb_search
+
+    bundled = tmp_path / "bundled"
+    bundled.mkdir()
+    (bundled / "sample.md").write_text(
+        "# ch01 示例\n\n## 示例小节\n\n这是仓库内的示例内容。\n", encoding="utf-8"
+    )
+    corpus = tmp_path / "corpus"
+    corpus.mkdir()
+    (corpus / "textbook-ch02.md").write_text(
+        "# ch02 教材章节\n\n## 教材里的正态分布\n\n"
+        "正态分布的密度函数是 $$f(x)=\\frac{1}{\\sqrt{2\\pi}\\sigma}e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}$$\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(kb_search, "KB_DIR", bundled)
+    original = settings.corpus_dir
+    try:
+        settings.corpus_dir = str(corpus)
+        kb_search.reset_index()
+
+        info = kb_search.corpus_info()
+        assert info["bundled_files"] == 1
+        assert info["corpus_files"] == 1
+        assert info["corpus_dir_exists"] is True
+        assert info["hint"] == "", "已经有教材语料了，不该再提示'尚未放入'"
+
+        # 教材里的内容必须检索得到
+        hits, _ = kb_search.search_with_trace("正态分布的密度函数是什么", top_k=3)
+        assert hits
+        assert hits[0]["heading"] == "教材里的正态分布"
+        assert hits[0]["corpus_source"] == "教材语料"
+        assert hits[0]["corpus_file"] == "corpus/textbook-ch02.md", "外部语料不许泄露绝对路径"
+
+        # 示例语料也还在索引里（两来源是"并存"，不是替换）
+        hits2, _ = kb_search.search_with_trace("示例内容", top_k=3)
+        assert hits2 and hits2[0]["corpus_source"] == "示例语料"
+    finally:
+        settings.corpus_dir = original
+        kb_search.reset_index()
+
+
+def test_corpus_info_hints_when_no_textbook(tmp_path: Path, monkeypatch) -> None:
+    """只有示例语料时，要给出"教材还没放进来 + 放到哪"的人话提示。"""
+    from app.config import settings
+    from app.tools import kb_search
+
+    bundled = tmp_path / "bundled"
+    bundled.mkdir()
+    (bundled / "sample.md").write_text("# ch01 示例\n\n## 小节\n\n内容。\n", encoding="utf-8")
+
+    monkeypatch.setattr(kb_search, "KB_DIR", bundled)
+    original = settings.corpus_dir
+    try:
+        settings.corpus_dir = str(tmp_path / "not-there")
+        kb_search.reset_index()
+        info = kb_search.corpus_info()
+        assert info["corpus_files"] == 0
+        assert info["corpus_dir_exists"] is False
+        assert "尚未放入正式教材语料" in info["hint"]
+    finally:
+        settings.corpus_dir = original
+        kb_search.reset_index()
+
+
+def test_health_exposes_corpus_sources() -> None:
+    """/api/health 要能回答"教材放进来了没有"。"""
+    from fastapi.testclient import TestClient
+
+    from app.main import build_app
+
+    body = TestClient(build_app()).get("/api/health").json()
+    corpus = body["knowledge_base"]["corpus"]
+    assert corpus["sections"] > 0
+    assert "bundled_files" in corpus and "corpus_files" in corpus
+    assert corpus["by_source"]
 
 
 # --------------------------------------------------------------------------

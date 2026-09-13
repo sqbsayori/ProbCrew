@@ -24,6 +24,13 @@ models/
 *.safetensors
 *.onnx
 
+# ===== 仓库外正式语料（L1 教材，仅校内，**绝不进公开仓库**）=====
+# CORPUS_DIR 默认指向这里（config.py / .env.example 都这么写）。
+# 教材 Markdown 丢进 backend/data/corpus/ 即生效；该目录只保留 .gitkeep，
+# 其余内容一律忽略 —— 否则 docs/13 §1.1 的"绝不进仓库"就是一句空话。
+backend/data/corpus/*
+!backend/data/corpus/.gitkeep
+
 # ===== 前端 =====
 node_modules/
 dist/
@@ -59,6 +66,8 @@ dist/
 .git-commit-msg.tmp
 *.tmp
 .release-notes-*.md
+# 本地草稿（PR 说明等），写给自己看的，不入库
+.draft-*.md
 
 # ===== 会话交接文档（不属于项目文档，不入库）=====
 # 这类文件是给下一次会话/下一位接手者的临时衔接材料，
