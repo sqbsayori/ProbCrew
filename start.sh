@@ -10,6 +10,24 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# ---- 0. 读取 .env 配置（APP_HOST / APP_PORT 等）----
+# 目的与 启动.bat 一致：本地默认行为不变，换服务器**只改 .env，不改代码**。
+# 只取需要的键，避免把 .env 里的任意内容当成 shell 代码执行。
+env_value() {
+  [ -f .env ] || return 0
+  sed -n "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*//p" .env \
+    | tail -n 1 \
+    | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'\$//" -e 's/[[:space:]]*$//'
+}
+
+APP_HOST="$(env_value APP_HOST)"; APP_HOST="${APP_HOST:-127.0.0.1}"
+APP_PORT="$(env_value APP_PORT)"; APP_PORT="${APP_PORT:-8000}"
+
+# 打印用的地址：监听 0.0.0.0 时浏览器要用本机地址访问
+OPEN_HOST="$APP_HOST"
+[ "$OPEN_HOST" = "0.0.0.0" ] && OPEN_HOST="127.0.0.1"
+SITE="http://$OPEN_HOST:$APP_PORT"
+
 echo
 echo "============================================================"
 echo "  概率论伴学助手 · 多智能体原型演示包"
@@ -52,17 +70,19 @@ echo "[3/4] 前端注册表已同步"
 echo "[4/4] 正在启动服务..."
 echo
 echo "------------------------------------------------------------"
-echo "  服务地址： http://127.0.0.1:8000"
+echo "  监听地址： $APP_HOST:$APP_PORT   (来自 .env 的 APP_HOST / APP_PORT)"
+echo "  访问地址： $SITE"
 echo
 echo "  建议按顺序看这三处："
-echo "    1) 原始动画 + 悬浮窗   http://127.0.0.1:8000/raw-live/"
-echo "    2) 演示课程页 + 页宠   http://127.0.0.1:8000/course/"
-echo "    3) 独立站点（9 页）    http://127.0.0.1:8000/"
+echo "    1) 原始动画 + 悬浮窗   $SITE/raw-live/"
+echo "    2) 演示课程页 + 页宠   $SITE/course/"
+echo "    3) 独立站点（9 页）    $SITE/"
 echo
 echo "  未配置 API Key 时自动用 Mock 模式，断网也能完整演示。"
+echo "  想让局域网其他机器访问：在 .env 里设 APP_HOST=0.0.0.0"
 echo "  关闭服务：按 Ctrl+C。"
 echo "------------------------------------------------------------"
 echo
 
 cd backend
-exec "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+exec "$PY" -m uvicorn app.main:app --host "$APP_HOST" --port "$APP_PORT"

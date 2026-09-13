@@ -10,7 +10,7 @@
 启动：
     cd ProbCrew/backend
     python -m app.main
-然后浏览器打开 http://127.0.0.1:8000
+然后浏览器打开 http://<APP_HOST>:<APP_PORT>（默认 127.0.0.1:8000，由 .env 决定）。
 """
 from __future__ import annotations
 
@@ -59,13 +59,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
           + ", ".join(t.id for t in app.state.tools.all()))
     print(f"  HITL / Verify: {settings.hitl_enabled} / {settings.verify_enabled}")
     print(f"  Frontend     : {FRONTEND_DIR}")
+    print(f"  CORS 白名单   : {', '.join(settings.cors_origin_list)}")
+    print(f"  学习记录库    : {settings.resolved_db_path}")
     if RAW_ANIMATIONS_DIR.exists():
         n = len(list(RAW_ANIMATIONS_DIR.glob("*.html")))
         print(f"  原始动画      : {RAW_ANIMATIONS_DIR}  ({n} 个 html) -> /raw/")
-    print(f"  → http://{settings.app_host}:{settings.app_port}")
-    print(f"  → http://{settings.app_host}:{settings.app_port}/course/   （演示课程页）")
+    base = f"http://{settings.app_host}:{settings.app_port}"
+    print(f"  → {base}")
+    print(f"  → {base}/course/   （演示课程页）")
     if RAW_ANIMATIONS_DIR.exists():
-        print(f"  → http://{settings.app_host}:{settings.app_port}/raw/      （原始动画 + 悬浮窗）")
+        print(f"  → {base}/raw/      （原始动画 + 悬浮窗）")
+    if settings.app_host == "0.0.0.0":  # noqa: S104 - 部署时明确要求监听全部网卡
+        print("  提示：APP_HOST=0.0.0.0 时，请从局域网其他机器用本机 IP 访问；")
+        print("        并把 CORS_ORIGINS 设成实际来源白名单（默认 * 仅适合内网试用）。")
     print("=" * 62 + "\n")
     yield
 
@@ -90,11 +96,17 @@ def build_app() -> FastAPI:
     app.state.graph = graph
     app.state.settings = settings
 
-    # 开发期放开 CORS：前端如果是独立 dev server（如 Vite）也能直连
+    # CORS 由配置决定（`CORS_ORIGINS`，逗号分隔）：
+    #   本地开发保持 `*`，行为与改造前完全一致；
+    #   服务器上设成白名单（例如 `https://probstat.example.edu`）即收窄。
+    # 注意：`*` 与 `allow_credentials=True` 在浏览器里是无效组合，
+    # 所以只有收窄成白名单时才允许带凭证，避免"看起来配了其实不生效"。
+    origins = settings.cors_origin_list
+    allow_credentials = settings.cors_allow_credentials and "*" not in origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=False,
+        allow_origins=origins,
+        allow_credentials=allow_credentials,
         allow_methods=["*"],
         allow_headers=["*"],
     )

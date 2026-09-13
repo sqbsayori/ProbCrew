@@ -51,8 +51,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -r requirements-dev.txt
 
-      # --- 契约校验（最重要的一项）---
-      - name: 契约校验（38 项）
+      # --- 契约校验（最重要的一项；含"前端不许写死后端地址"）---
+      - name: 契约校验（40 项）
         run: python scripts/check_contracts.py
 
       # --- API 契约是否过期 ---
@@ -79,6 +79,9 @@ jobs:
 
       - name: 页面伴学单测
         run: python backend/tests/test_page_context.py
+
+      - name: 部署无关化单测
+        run: python backend/tests/test_deployment.py
 
   # --------------------------------------------------------------------------
   # 前端：语法 + 渲染器
@@ -112,6 +115,10 @@ jobs:
 
       - name: 渲染器归一化测试（6 项）
         run: node frontend/widget/_test_render.mjs
+
+      # 部署无关化：不许把后端地址写回前端（含油猴脚本的地址解析顺序）
+      - name: 部署无关化测试
+        run: node frontend/widget/_test_deploy.mjs
 
       # 语法过了不等于页面能挂载：每个 feature 的 mount/unmount 真跑一遍
       - name: 页面挂载冒烟（9 页）
