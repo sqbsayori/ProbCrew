@@ -28,6 +28,16 @@ cd 大创\ProbCrew
 .\scripts\dev.ps1            # 有 API Key 用 DeepSeek，没 Key 自动降级 Mock
 ```
 
+可选一步（想用**语义检索**时才需要，约 4.5 GB，装一次即可）：
+
+```powershell
+python scripts/setup_models.py     # 把 BGE-M3 + bge-reranker-v2-m3 拉到本机缓存
+```
+
+> 检索默认**只读本地权重、运行时不联网**（数据不出校）。不装也能跑：
+> 向量层会自动退回离线降级实现，并在 `/api/health` 与检索结果里**如实标注**，
+> 不会假装在做语义检索。详见 [`docs/16`](docs/16-检索升级对比.md)。
+
 > ⚠️ **这是原型，不是成品。** 使用前请先读 **[`原型声明.md`](原型声明.md)**：
 > 已知限制、数据流向（页面内容会发给大模型厂商）、第三方平台合规注意事项都在里面。
 >
@@ -36,14 +46,20 @@ cd 大创\ProbCrew
 > 主线 = 不依赖学生数据的**可靠解题助手**（正确性保障链 + 检索加强 + 评估体系）；
 > 依赖真实学生数据的学习者建模方案（`docs/08`）已**挂起**，等数据到位再启动。
 
-然后打开下面任一地址：
+然后打开下面任一地址（默认 `http://127.0.0.1:8000`，实际地址由 `.env` 的
+`APP_HOST` / `APP_PORT` 决定，`启动.bat` 会把真实地址打印出来）：
 
 | 想试什么 | 地址 |
 |---|---|
-| **在原始动画页面上看悬浮窗**（推荐先试这个） | http://127.0.0.1:8000/raw-live/ |
-| 演示课程页（模拟真实课程平台课件页） | http://127.0.0.1:8000/course/ |
-| 独立站点外壳（工作台/动画库/分布可视化/架构） | http://127.0.0.1:8000/ |
-| 油猴脚本（第三方平台注入用） | http://127.0.0.1:8000/widget/probstat-assistant.user.js |
+| **在原始动画页面上看悬浮窗**（推荐先试这个） | `/raw-live/` |
+| 演示课程页（模拟真实课程平台课件页） | `/course/` |
+| 独立站点外壳（工作台/动画库/分布可视化/架构） | `/` |
+| 油猴脚本（第三方平台注入用） | `/widget/probstat-assistant.user.js` |
+
+> 🌐 **想让局域网其他机器也能用**：在 `.env` 里设 `APP_HOST=0.0.0.0`、
+> `CORS_ORIGINS=http://<本机IP>:8000`，重启即可 —— **不需要改任何代码**。
+> 换机器/换域名部署时，油猴脚本也不用改：它的 `@require` 是相对路径，
+> 地址按"从哪安装"自动推断（详见 [`docs/13`](docs/13-数据分级与部署准备.md) §2.2）。
 
 `/raw-live/` 是**免安装**入口：后端把 `大创/动画` 那 8 个原始动画镜像出来，
 在响应时动态注入悬浮窗 —— **磁盘上的原文件一个字节都没改**。
@@ -110,7 +126,7 @@ ProbCrew/
 │       ├── domain/               8 种分布的 SymPy 符号推导
 │       ├── providers/            deepseek / mock
 │       ├── knowledge_base/probstat.md
-│       └── tests/                test_kernel.py · test_page_context.py
+│       └── tests/                test_kernel.py · test_page_context.py · test_deployment.py
 └── frontend/
     ├── course/                   ★ 演示课程页（模拟真实课程平台）
     ├── widget/                   ★ 可注入的助手组件
@@ -170,11 +186,13 @@ python scripts/package.py --version 0.1.0
 排除 `*.sqlite`（学习记录属隐私）与 `__pycache__`，并生成含逐文件 SHA256 的
 `PACKAGE-INFO.txt`。
 
-收到包的人只需三步：解压 → 双击 `启动.bat` → 打开 `http://127.0.0.1:8000/course/`。
+收到包的人只需三步：解压 → 双击 `启动.bat` → 打开窗口里打印的地址（默认
+`http://127.0.0.1:8000/course/`）。
 包内自带 8 个动画，`/raw-live/` 开箱即用，不依赖外部文件夹。
 
 部署方式（本机 / 局域网 / 服务器 + Docker + Nginx + HTTPS）见
-**[`docs/07-部署与分发.md`](docs/07-部署与分发.md)**。
+**[`docs/07-部署与分发.md`](docs/07-部署与分发.md)**；
+"靠配置切换环境、不改源码"的约定见 **[`docs/13`](docs/13-数据分级与部署准备.md)**。
 
 ---
 
@@ -192,9 +210,13 @@ python scripts/package.py --version 0.1.0
 - 8 种分布的 SymPy 符号推导 + 交互式绘图（纯 Canvas）
 - Shadow DOM 完全隔离，不污染宿主课程平台
 - Mock Provider：无 Key / 断网可完整演示
+- **部署无关化**：前端零写死地址（油猴 `@require` 相对路径 + 五层地址解析），
+  后端 host/port/CORS/DB 全走 `.env`，换机器只改配置不改代码
+- **混合检索**：BM25 + **BGE-M3**（本地推理）+ **bge-reranker-v2-m3** 重排，
+  命中带出处（章 / 小节 / 行号 / 片段）；40 题对比数据见 [`docs/16`](docs/16-检索升级对比.md)
 
 **未实现（迭代二）**
-- 真实 RAG：Qdrant 混合检索（当前是本地 Markdown + bigram TF-IDF，接口已冻结）
+- 向量库外置（Qdrant 等）：当前向量索引在进程内，教材规模上来后再换
 - 知识点依赖图（DAG）与级联定位薄弱根源
 - 做题/测验交互与错题库闭环
 - 用户系统（当前用浏览器本地 session id）
