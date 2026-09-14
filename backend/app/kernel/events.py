@@ -16,18 +16,23 @@
 
 事件类型总览（前端按需订阅，未知类型必须忽略而不是报错）
 --------------------------------------------------------
-    run.start     运行开始
-    plan          Orchestrator 的调度计划（可见"多 Agent 协作"的决策过程）
-    agent.start   某个 Agent 开始工作
-    agent.delta   LLM 流式增量文本
-    agent.end     某个 Agent 结束（含耗时，前端画甘特/轨迹）
-    tool.call     工具调用开始
-    tool.result   工具调用结束
-    artifact      结构化产出（动画 / 图表 / 公式 / 解题步骤）
-    hitl.request  人机协同：暂停等待用户确认或修正
-    hitl.resolved 人机协同：用户已处理
-    run.end       运行结束
-    error         错误
+    run.start           运行开始
+    context.received    已收到页面上下文（页面伴学）
+    plan                Orchestrator 的调度计划（可见"多 Agent 协作"的决策过程）
+    agent.start         某个 Agent 开始工作
+    agent.delta         LLM 流式增量文本
+    agent.end           某个 Agent 结束（含耗时，前端画甘特/轨迹）
+    tool.call           工具调用开始
+    tool.result         工具调用结束
+    artifact            结构化产出（动画 / 图表 / 公式 / 解题步骤）
+    verification.report 验证报告（级别 A/B/C/D，前端必须显著展示）
+    hitl.request        人机协同：暂停等待用户确认或修正
+    hitl.resolved       人机协同：用户已处理
+    run.end             运行结束
+    error               错误
+
+    共 14 种。**只增不改**：以 `contracts/events.schema.json` 的 `type.enum` 为准，
+    本清单必须与它逐项一致（`scripts/check_contracts.py` 会比对）。
 """
 from __future__ import annotations
 
@@ -231,6 +236,28 @@ def hitl_request(
         agent=agent,
         draft=draft,
         options=options or ["confirm", "correct", "supplement"],
+    )
+
+
+def hitl_resolved(
+    run_id: str,
+    action: HitlAction,
+    final: str | None = None,
+    hitl_id: str | None = None,
+    agent: str | None = None,
+) -> Event:
+    """用户已处理 HITL 请求。
+
+    与 `hitl_request` 成对出现：`hitl_id` 指回被处理的那次请求，
+    `action` 是用户选的动作，`final` 是修正/补充后的最终文本。
+    """
+    return ev(
+        "hitl.resolved",
+        run_id=run_id,
+        hitl_id=hitl_id,
+        agent=agent,
+        action=action,
+        final=final,
     )
 
 
