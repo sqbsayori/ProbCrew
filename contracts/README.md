@@ -25,7 +25,7 @@
 | 文件 | 管什么 | 权威实现 | 状态 |
 |------|--------|---------|------|
 | **`events.schema.json`** | ★ 运行时事件协议（前后端唯一约定） | `backend/app/kernel/events.py` | 已冻结 v1 |
-| **`verification.schema.json`** | ★ 验证级别与验证报告（M1 核心） | `backend/app/kernel/verification.py` | 待实现 |
+| **`verification.schema.json`** | ★ 验证级别与验证报告（M1 核心） | 报告构造：`backend/app/agents/verifier.py`；事件出口：`backend/app/kernel/events.py::verification_report()` | ✅ 已实现（A1） |
 | **`math-task.schema.json`** | 形式化产物 MathTask（M1.1） | `backend/app/domain/formalize.py` | 待实现 |
 | `agent.schema.json` | Agent 规格：输入 / 输出 / 工具权限 | `backend/app/kernel/specs.py::AgentSpec` | 已实现 |
 | `tool.schema.json` | 工具规格：签名 / 返回值 / 错误 | `backend/app/kernel/specs.py::ToolSpec` | 已实现 |

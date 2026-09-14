@@ -93,7 +93,17 @@ def test_stream_covers_the_core_event_types() -> None:
     events = _run_once("什么是全概率公式？")
     kinds = {e.get("type") for e in events}
 
-    required = {"run.start", "agent.start", "agent.end", "tool.call", "tool.result", "run.end"}
+    required = {
+        "run.start",
+        "agent.start",
+        "agent.end",
+        "tool.call",
+        "tool.result",
+        # 验证闭环的权威出口：A1 之前这个事件**从未发出过**（构造器零调用），
+        # 前端因此没有验证级别可展示。这条断言把它钉住。
+        "verification.report",
+        "run.end",
+    }
     missing = required - kinds
     assert not missing, f"真实事件流缺少核心事件类型：{sorted(missing)}；实际出现：{sorted(kinds)}"
 
