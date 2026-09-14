@@ -1,0 +1,272 @@
+{
+  "manifest_version": 1,
+  "title": "ProbCrew 契约层总目录",
+  "description": "机器可读的契约清单。只放【元数据】：每个契约是什么状态、谁负责、实现落在哪个文件、当前有哪些未落地的偏差。契约的【内容】一律不放这里 —— 以 /contracts/*.schema.json 为准，避免第二处真相。",
+  "usage": "scripts/check_contracts.py 会校验：① 每个 .schema.json 都有条目 ② 每条 status 合法 ③ events.catalog 的类型集合与 events.schema.json 的 enum 完全一致。方向是『schema → manifest 对齐』，改 schema 必须同步改本文件。",
+
+  "lifecycle": {
+    "values": ["draft", "frozen", "reserved", "deprecated"],
+    "meaning": {
+      "draft": "尚未冻结，可以自由改；改动不需要 ADR，但需要 CHANGELOG",
+      "frozen": "已冻结。只增不改；破坏性变更必须走 docs/adr/ 并由 R1 批准",
+      "reserved": "为未来的工作流预留，先冻结让实现方照着写；当前无产出方也无消费方",
+      "deprecated": "已废弃，保留仅供迁移期参考；新代码不得使用"
+    }
+  },
+
+  "snapshot": {
+    "date": "2026-09-13",
+    "branch": "dev",
+    "commit": "3ce581c",
+    "schema_draft": "http://json-schema.org/draft-07/schema#",
+    "note": "改动契约时请把 date/commit 一起更新，否则 MANIFEST 会变成过期文档。"
+  },
+
+  "contracts": [
+    {
+      "file": "events.schema.json",
+      "version": "v1.2",
+      "title": "Agent 运行时事件协议",
+      "layer": "transport",
+      "status": "frozen",
+      "owner": "R1",
+      "authority": {
+        "producer": "backend/app/kernel/events.py",
+        "transport": "backend/app/kernel/runner.py",
+        "source_of_truth": "contracts/events.schema.json"
+      },
+      "consumers": [
+        "frontend/app/components/trace.js",
+        "frontend/widget/assistant.js",
+        "frontend/widget/api.js"
+      ],
+      "verified_by": [
+        "scripts/check_contracts.py",
+        "scripts/smoke_test.py",
+        "backend/tests/test_contract_events.py"
+      ],
+      "notes": "前后端之间唯一的运行时约定。14 种事件类型；新增类型属兼容变更，删除/改名属破坏性变更。"
+    },
+    {
+      "file": "verification.schema.json",
+      "version": "v1.2",
+      "title": "验证报告",
+      "layer": "assurance",
+      "status": "frozen",
+      "owner": "R1",
+      "authority": {
+        "producer": "backend/app/agents/verifier.py",
+        "source_of_truth": "contracts/verification.schema.json"
+      },
+      "consumers": [
+        "backend/app/kernel/events.py::verification_report",
+        "frontend/app/components/trace.js"
+      ],
+      "verified_by": ["backend/tests/test_verifier.py"],
+      "notes": "主线对用户的承诺：绝不允许在没有验证报告的情况下输出解答。A/B/C/D 四级；每条 check 必须带 method。"
+    },
+    {
+      "file": "agent.schema.json",
+      "version": "v1.2",
+      "title": "Agent 规格与产出",
+      "layer": "runtime",
+      "status": "frozen",
+      "owner": "R2",
+      "authority": {
+        "producer": "backend/app/kernel/specs.py::AgentSpec",
+        "source_of_truth": "contracts/agent.schema.json"
+      },
+      "consumers": ["backend/app/kernel/registry.py", "backend/app/kernel/graph.py", "frontend/app/features/architecture/index.js"],
+      "verified_by": ["scripts/check_contracts.py"],
+      "notes": "含 emits 的 6 种 artifact kind 枚举。"
+    },
+    {
+      "file": "tool.schema.json",
+      "version": "v1.2",
+      "title": "工具规格与调用结果",
+      "layer": "runtime",
+      "status": "frozen",
+      "owner": "R2",
+      "authority": {
+        "producer": "backend/app/kernel/specs.py::ToolSpec",
+        "source_of_truth": "contracts/tool.schema.json"
+      },
+      "consumers": ["backend/app/kernel/specs.py::ToolRegistry", "backend/app/tools/*.py", "frontend/app/components/trace.js"],
+      "verified_by": ["scripts/check_contracts.py"],
+      "notes": "核心是 ok / empty / available 三态：「查不到」不等于「失败」。"
+    },
+    {
+      "file": "page-context.schema.json",
+      "version": "v1.2",
+      "title": "页面上下文",
+      "layer": "data",
+      "status": "frozen",
+      "owner": "R4",
+      "authority": {
+        "producer": "backend/app/kernel/page_context.py",
+        "source_of_truth": "contracts/page-context.schema.json"
+      },
+      "consumers": ["backend/app/tools/page_tools.py", "frontend/widget/extractor.js", "frontend/widget/frames.js"],
+      "verified_by": ["backend/tests/test_page_context.py", "backend/tests/test_contract_events.py"],
+      "notes": "固定了 score 的计算口径（len(text) + 40×公式 + 20×标题 + 600×选中 + 200×媒体）—— 前后端必须同口径，否则多 frame 仲裁结果会不一致。"
+    },
+    {
+      "file": "math-task.schema.json",
+      "version": "v1.2",
+      "title": "MathTask 数学任务",
+      "layer": "data",
+      "status": "reserved",
+      "owner": "R3",
+      "authority": {
+        "producer": null,
+        "source_of_truth": "contracts/math-task.schema.json"
+      },
+      "consumers": [],
+      "verified_by": [],
+      "notes": "★ 只有 schema，没有产出方。权威实现 contracts/README.md 曾指向 backend/app/domain/formalize.py，该文件不存在。任务 C2 负责实现，实现必须向本 schema 对齐。"
+    },
+    {
+      "file": "attempt.schema.json",
+      "version": "v1.2",
+      "title": "作答事件（Attempt）",
+      "layer": "data",
+      "status": "reserved",
+      "owner": "R4",
+      "authority": {
+        "producer": null,
+        "source_of_truth": "contracts/attempt.schema.json"
+      },
+      "consumers": [],
+      "verified_by": [],
+      "notes": "B 线（学生数据 / 教师端）的数据契约，B 线已挂起。先冻结是因为整条 B 线的模型都吃这张表。hint_used 与 duration_ms 不可省 —— 少了它们 BKT 会把「独立答对」与「被提示后答对」当成同一观测。"
+    },
+    {
+      "file": "api.md",
+      "version": "generated",
+      "title": "HTTP API 契约",
+      "layer": "transport",
+      "status": "frozen",
+      "owner": "R1",
+      "authority": {
+        "producer": "backend/app/api/*.py（FastAPI 自动发现）",
+        "generator": "scripts/gen_api_contract.py",
+        "source_of_truth": "生成的产物本身，禁止手工编辑"
+      },
+      "consumers": ["frontend/widget/api.js", "frontend/app/core/api.js"],
+      "verified_by": ["scripts/check_contracts.py", ".github/workflows/ci.yml"],
+      "notes": "由脚本从 FastAPI 应用生成。手写 API 文档一定会过期。"
+    }
+  ],
+
+  "events": {
+    "catalog_version": "v1.2",
+    "total": 14,
+    "authority": "contracts/events.schema.json → properties.type.enum",
+    "catalog": [
+      { "type": "run.start", "phase": "open", "emitter": "kernel/runner.py::stream_run", "required_fields": ["run_id", "session_id", "query"] },
+      { "type": "context.received", "phase": "open", "emitter": "kernel/runner.py::_emit_context", "required_fields": ["run_id", "summary", "data"] },
+      { "type": "plan", "phase": "route", "emitter": "kernel/graph.py::orchestrator_node", "required_fields": ["run_id", "intent", "steps"] },
+      { "type": "agent.start", "phase": "work", "emitter": "kernel/graph.py::_make_agent_node", "required_fields": ["run_id", "agent", "label"] },
+      { "type": "agent.delta", "phase": "work", "emitter": "RunContext::stream_llm", "required_fields": ["run_id", "agent", "text"] },
+      { "type": "tool.call", "phase": "work", "emitter": "RunContext::emit_tool_call", "required_fields": ["run_id", "agent", "tool", "args"] },
+      { "type": "tool.result", "phase": "work", "emitter": "RunContext::emit_tool_result", "required_fields": ["run_id", "tool", "ok", "data"] },
+      { "type": "artifact", "phase": "work", "emitter": "RunContext::emit_artifact", "required_fields": ["run_id", "kind", "payload"] },
+      { "type": "agent.end", "phase": "work", "emitter": "kernel/graph.py::_make_agent_node", "required_fields": ["run_id", "agent", "ok"] },
+      { "type": "verification.report", "phase": "verify", "emitter": "agents/verifier.py::verify", "required_fields": ["run_id", "data"] },
+      { "type": "hitl.request", "phase": "gate", "emitter": "kernel/runner.py::stream_run", "required_fields": ["run_id", "hitl_id", "agent", "draft"] },
+      { "type": "hitl.resolved", "phase": "gate", "emitter": "kernel/runner.py::resume_run", "required_fields": ["run_id", "action"] },
+      { "type": "run.end", "phase": "close", "emitter": "kernel/runner.py::_invoke", "required_fields": ["run_id", "status"] },
+      { "type": "error", "phase": "any", "emitter": "kernel/runner.py::_invoke", "required_fields": ["run_id", "message"] }
+    ],
+    "phases": {
+      "open": "一次 run 的开场",
+      "route": "路由决策",
+      "work": "Agent 与工具的实际工作",
+      "verify": "独立校验",
+      "gate": "人机协同闸门",
+      "close": "收尾",
+      "any": "任意阶段都可能出现"
+    },
+    "compatibility_rule": "前端 switch 必须有 default 分支并静默忽略未知事件类型。这是只增不改能成立的前提。"
+  },
+
+  "artifacts": {
+    "authority": "contracts/events.schema.json → kind 枚举",
+    "total": 6,
+    "kinds": ["animation", "chart", "formula", "steps", "text", "table"],
+    "note": "新增 kind 属兼容变更（前端未注册的 kind 显示「未知产物类型」而不是崩溃）；修改已有 kind 的字段属破坏性变更。"
+  },
+
+  "known_gaps": [
+    {
+      "id": "GAP-1",
+      "contract": "agent.schema.json",
+      "claim": "声明了工具集的 Agent 只能调用被授权的工具；调用未授权工具会被拒绝",
+      "reality": "门控逻辑存在于 backend/app/kernel/specs.py:99-101，但唯一入口 RunContext.use()（specs.py:200）写死 allowed=None，全仓库无人传 allowed。",
+      "evidence": "实测：orchestrator（AgentSpec.tools = ()）调用 ctx.use(\"kb_search\") 成功返回 4 个片段，无异常。",
+      "resolution_task": "K1",
+      "status": "open"
+    },
+    {
+      "id": "GAP-2",
+      "contract": "tool.schema.json",
+      "claim": "ToolResult 的 ok 反映执行是否成功；ok=false 时给 error 说明；「查不到」是 ok=true + empty=true",
+      "reality": "RunContext.emit_tool_result（specs.py:186-190）把事件里的 ok 硬编码为 True，且调用点 specs.py:104 没有 try/except。empty 只出现在 data 里，事件层不可见。",
+      "evidence": "实测 tool.result 报文为 {\"type\":\"tool.result\",\"ok\":true,...}，即使 kb_search 自报 empty=true。前端 trace.js:194 的失败分支永不触发。",
+      "resolution_task": "K2",
+      "status": "open"
+    },
+    {
+      "id": "GAP-3",
+      "contract": "verification.schema.json",
+      "claim": "前端必须显著展示验证级别，不能藏在折叠面板；不得出现「已校验」这类笼统表述",
+      "reality": "后端已按 C1 发出 verification.report，但前端零处理。",
+      "evidence": "实测：frontend/ 全目录 grep 'verification' 零命中；trace.js 的 switch（99-258 行）与 assistant.js 的 switch（924-983 行）均无该分支。",
+      "resolution_task": "X1",
+      "status": "open"
+    },
+    {
+      "id": "GAP-4",
+      "contract": "verification.schema.json",
+      "claim": "level A 需要 sympy_recompute、level B 需要 symbolic_equivalence 这类确定性手段支撑",
+      "reality": "verifier 的 checks 里从来没有出现过这两类 method，因此按「手段封顶」规则 A/B 恒不可达。",
+      "evidence": "实测：数值题最终 level=C，证明题 level=D。级别是推导出来的，不是写死的。",
+      "resolution_task": "C2",
+      "status": "open"
+    },
+    {
+      "id": "GAP-5",
+      "contract": "verification.schema.json",
+      "claim": "disagreements 用于承载多路求解之间的分歧，「非空是重要信号」",
+      "reality": "全仓库没有任何代码产出该字段；它只在 schema 的 examples 里出现过。",
+      "evidence": "grep disagreements 在 backend/ 下无产出方。",
+      "resolution_task": "C4",
+      "status": "open"
+    },
+    {
+      "id": "GAP-6",
+      "contract": "math-task.schema.json",
+      "claim": "权威实现为 backend/app/domain/formalize.py",
+      "reality": "该文件不存在；MathTask 只有 schema，没有产出方。",
+      "evidence": "glob backend/app/domain/formalize.py → 不存在（该目录只有 distributions.py）。",
+      "resolution_task": "C2",
+      "status": "open"
+    },
+    {
+      "id": "GAP-7",
+      "contract": "events.schema.json（hitl.request 的触发条件）",
+      "claim": "docs/02 只说「图挂起时发」，docs/12 只说「高风险结论（解题）必须人工确认」，契约层没有定义「什么该挂起」",
+      "reality": "判定条件写在 agents/verifier.py:238-247（两处置 needs_human=True）里，属于实现细节而非契约。实测证明题（intent=solve）会触发 HITL，与 docs/12 的口径是否一致无人裁定。",
+      "evidence": "实测三种提问的 hitl.request 命中矩阵见 docs/17 §三 C3 卡片。",
+      "resolution_task": "C3",
+      "status": "open"
+    }
+  ],
+
+  "pending": [
+    { "item": "契约版本号写进 schema 的 $id", "trigger": "第一次出现破坏性变更时" },
+    { "item": "error.schema.json（结构化错误码）", "trigger": "错误处理需要跨语言/跨进程区分时" },
+    { "item": "MCP 工具的契约扩展（dangerous 字段启用）", "trigger": "P2 之后接外部工具时" },
+    { "item": "attempt.schema.json 由 reserved 转为 frozen", "trigger": "B 线启动（见 docs/09 第六节）" }
+  ]
+}

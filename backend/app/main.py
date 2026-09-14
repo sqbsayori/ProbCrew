@@ -63,12 +63,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print(f"  学习记录库    : {settings.resolved_db_path}")
     if RAW_ANIMATIONS_DIR.exists():
         n = len(list(RAW_ANIMATIONS_DIR.glob("*.html")))
-        print(f"  原始动画      : {RAW_ANIMATIONS_DIR}  ({n} 个 html) -> /raw/")
+        print(f"  原始动画      : {RAW_ANIMATIONS_DIR}  ({n} 个 html)")
     base = f"http://{settings.app_host}:{settings.app_port}"
     print(f"  → {base}")
-    print(f"  → {base}/course/   （演示课程页）")
+    print(f"  → {base}/raw-live/  （★ 推荐先试：原始动画 + 悬浮窗，后端响应时注入）")
+    print(f"  → {base}/course/    （演示课程页，模拟真实课程平台）")
     if RAW_ANIMATIONS_DIR.exists():
-        print(f"  → {base}/raw/      （原始动画 + 悬浮窗）")
+        # 注意区分这两个入口，很容易搞混：
+        #   /raw-live/  = 动画 + 悬浮窗（后端注入），这才是能试助手的地方
+        #   /raw/       = 同一批动画的静态目录，**没有**悬浮窗（改 /raw-live 前遗留的旧入口）
+        print(f"  → {base}/raw/       （原始动画静态文件，不含悬浮窗）")
     if settings.app_host == "0.0.0.0":  # noqa: S104 - 部署时明确要求监听全部网卡
         print("  提示：APP_HOST=0.0.0.0 时，请从局域网其他机器用本机 IP 访问；")
         print("        并把 CORS_ORIGINS 设成实际来源白名单（默认 * 仅适合内网试用）。")

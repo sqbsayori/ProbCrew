@@ -73,15 +73,12 @@ jobs:
       - name: 端到端自检（25 项）
         run: python scripts/smoke_test.py
 
-      # --- 单元测试 ---
-      - name: 内核单测
-        run: python backend/tests/test_kernel.py
-
-      - name: 页面伴学单测
-        run: python backend/tests/test_page_context.py
-
-      - name: 部署无关化单测
-        run: python backend/tests/test_deployment.py
+      # --- 单元测试（全量）---
+      # 注意：曾经这里逐个点名三个文件跑（kernel / page_context / deployment，共 52 项），
+      # 于是 test_grader.py(16) 与 test_retrieval.py(22) **从未在 CI 里跑过** —— 
+      # 它们一直绿靠的是没人改。改用 pytest 全量收集，新增测试文件自动纳入。
+      - name: 单元测试（全量）
+        run: python -m pytest backend/tests -q
 
   # --------------------------------------------------------------------------
   # 前端：语法 + 渲染器

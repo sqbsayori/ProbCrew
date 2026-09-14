@@ -13,9 +13,25 @@
 | | |
 |---|---|
 | 仓库 | https://github.com/sqbsayori/ProbCrew |
-| 当前阶段 | 原型骨架（对应 `docs/05` 的 P0 完成） |
-| 执行依据 | [`docs/09-主线范围与数据需求清单.md`](docs/09-主线范围与数据需求清单.md) |
-| 契约 | [`contracts/`](contracts/) —— 前后端唯一约定 |
+| 当前阶段 | 原型骨架 |
+| **现在做什么** | [`docs/17-模块化任务书.md`](docs/17-模块化任务书.md) —— 任务卡 + 验收命令 + 基线数字 |
+| **为什么这么做** | [`docs/12-基础开发计划.md`](docs/12-基础开发计划.md)（M0–M6 阶段）· [`docs/09`](docs/09-主线范围与数据需求清单.md)（范围与数据需求） |
+| **接口约定** | [`contracts/INDEX.md`](contracts/INDEX.md) —— 契约总目录（含**已知未落地项**） |
+| **文档全图** | [`docs/18-文档地图.md`](docs/18-文档地图.md) —— 每个主题的**单一权威**是哪一份 |
+
+### 该读哪一份（别乱翻）
+
+| 我是谁 / 我想干什么 | 读这个 |
+|---|---|
+| **🔴 今天要领任务开工的成员** | **[`docs/19-成员上手与分工.md`](docs/19-成员上手与分工.md)** —— 15 分钟跑起来 + 怎么领任务 + 避冲突 |
+| 第一次来，想跑起来 | [`docs/00-快速开始.md`](docs/00-快速开始.md) |
+| 要接手写代码 | [`docs/17-模块化任务书.md`](docs/17-模块化任务书.md) §三 找一张任务卡 |
+| 要理解整体架构 | [`docs/01-架构总览.md`](docs/01-架构总览.md) |
+| 要改前后端接口 / 加事件 | [`contracts/INDEX.md`](contracts/INDEX.md) + [`docs/02-事件契约.md`](docs/02-事件契约.md) |
+| 要分工、要走 PR 流程 | [`docs/04-分工与协作规范.md`](docs/04-分工与协作规范.md) |
+| 要对老师/评委汇报 | [`docs/15-口径对照与偏差说明.md`](docs/15-口径对照与偏差说明.md) |
+| 想知道**有什么坑、什么没做** | [`contracts/INDEX.md`](contracts/INDEX.md) §六 + [`docs/17`](docs/17-模块化任务书.md) §六 已知限制 |
+| 想用/分发这个系统 | [`原型声明.md`](原型声明.md) → [`docs/07-部署与分发.md`](docs/07-部署与分发.md) |
 
 ---
 
@@ -42,11 +58,11 @@ python scripts/setup_models.py     # 把 BGE-M3 + bge-reranker-v2-m3 拉到本�
 > 已知限制、数据流向（页面内容会发给大模型厂商）、第三方平台合规注意事项都在里面。
 >
 > 📌 **当前阶段的执行依据**是
-> **[`docs/12-基础开发计划.md`](docs/12-基础开发计划.md)**（做什么、按什么顺序）与
-> **[`docs/13-数据分级与部署准备.md`](docs/13-数据分级与部署准备.md)**（数据与部署约束）；
-> 任务清单与验收标准见 **[`docs/14-开发交接单.md`](docs/14-开发交接单.md)**。
-> `docs/05-开发计划.md`、`docs/06-页面助手接入规范.md` 是早期版本，部分口径已被 `docs/12` 取代，
-> 保留作为历史记录。
+> **[`docs/17-模块化任务书.md`](docs/17-模块化任务书.md)**（现在做什么、怎么验收、基线数字是多少）与
+> **[`docs/12-基础开发计划.md`](docs/12-基础开发计划.md)**（M0–M6 阶段与完成标准）；
+> 数据与部署约束见 **[`docs/13-数据分级与部署准备.md`](docs/13-数据分级与部署准备.md)**。
+> 早期版本的 `docs/05-开发计划.md`、`docs/06-页面助手接入规范.md`、`docs/14-开发交接单.md`
+> 部分口径已被取代，保留作为历史记录（权威归属见 [`docs/18-文档地图.md`](docs/18-文档地图.md)）。
 >
 > 🧭 **这个仓库是什么**：它承担的是大创项目「**做什么 + 怎么协作**」这一半 ——
 > 产品骨架、事件契约、检索与校验链、工程设施（CI / 测试 / 部署无关化）。
@@ -111,30 +127,40 @@ KaTeX 已 vendor 到本地，8 个交互动画本身就是自包含 HTML。
 ProbCrew/
 ├── README.md
 ├── contracts/                    【契约层】前后端唯一约定
-│   └── events.schema.json            13 种事件（含 context.received）
+│   ├── INDEX.md                      ★ 契约总目录（登记表 / 事件协议 / 已知偏差）
+│   ├── MANIFEST.json                 机器可读清单（供脚本校验）
+│   ├── events.schema.json            14 种事件
+│   └── CHANGELOG.md                  「为什么改」—— 唯一校验不了的东西
 ├── docs/
 │   ├── 00-快速开始.md
 │   ├── 01-架构总览.md
 │   ├── 02-事件契约.md
 │   ├── 03-动画接入规范.md
 │   ├── 04-分工与协作规范.md
-│   ├── 05-开发计划.md                ← 若干轮分阶段计划
-│   ├── 06-页面助手接入规范.md          ← ★ 产品形态与注入方案
-│   └── notes/动画接入勘测.md
-├── scripts/  dev.ps1 · gen_registry.py · smoke_test.py · live_test.py
+│   ├── 07-部署与分发.md
+│   ├── 12-基础开发计划.md            （为什么这么做）
+│   ├── 13-数据分级与部署准备.md
+│   ├── 15-口径对照与偏差说明.md       （对老师汇报前必读）
+│   ├── 17-模块化任务书.md            ★ 现在做什么（任务卡 + 验收命令）
+│   ├── 18-文档地图.md                ★ 每个主题的单一权威是哪份
+│   ├── 19-成员上手与分工.md           ★ 下发用：15 分钟跑起来 + 领任务流程
+│   ├── archive/                      已归档文档（带归档抬头）
+│   ├── adr/                          架构决策记录
+│   └── notes/                        勘测与已知问题
+├── scripts/  dev.ps1 · check_contracts.py · gen_registry.py · smoke_test.py · live_test.py
 ├── backend/                      【后端】FastAPI + LangGraph
 │   └── app/
 │       ├── kernel/               编排内核 + 页面上下文模型（page_context.py）
 │       ├── agents/               7 个 Agent，一人一文件
 │       │                         ★ page_tutor.py = 页面伴学
-│       ├── tools/                15 个工具
+│       ├── tools/                16 个工具
 │       │                         ★ page_tools.py = 页内检索/大纲/选中
 │       ├── api/                  自动挂载
 │       │                         ★ raw_live.py = 给原始动画页注入悬浮窗
 │       ├── domain/               8 种分布的 SymPy 符号推导
 │       ├── providers/            deepseek / mock
 │       ├── knowledge_base/probstat.md
-│       └── tests/                test_kernel.py · test_page_context.py · test_deployment.py
+│       └── tests/                100 项单测（含契约、检索、批改、验证报告）
 └── frontend/
     ├── course/                   ★ 演示课程页（模拟真实课程平台）
     ├── widget/                   ★ 可注入的助手组件
@@ -174,12 +200,21 @@ ProbCrew/
 
 ```powershell
 cd ProbCrew
-python scripts/smoke_test.py                    # 端到端 25 项
-python backend/tests/test_kernel.py             # 内核 16 项
-python backend/tests/test_page_context.py       # 页面伴学 15 项
-python scripts/gen_registry.py --check          # 前端注册表一致性
-python scripts/live_test.py                     # 真模型联调（需服务已启动）
+$env:PYTHONIOENCODING="utf-8"     # 中文 Windows 必需（脚本已自处理，设了更保险）
+
+python scripts/check_contracts.py      # 契约 + 注册表 + 部署无关化，46 项
+python scripts/smoke_test.py           # 端到端自检，25 项
+python -m pytest backend/tests -q      # 单测，100 收集（CI 跑的就是这条）
+python scripts/gen_registry.py --check # 前端注册表一致性
+node frontend/app/_test_mount.mjs      # 页面挂载（改前端必跑）
+node frontend/widget/_test_render.mjs  # 渲染器
+node frontend/widget/_test_deploy.mjs  # 部署无关化
+python scripts/live_test.py            # 真模型联调（需服务已启动）
 ```
+
+> 完整的**基线数字**（多少 Agent / 多少工具 / 多少事件 / 哪些工具是死代码）只在
+> [`docs/17-模块化任务书.md`](docs/17-模块化任务书.md) §六 维护一处，README 不再复写 ——
+> 复写必然漂移。
 
 ---
 
@@ -209,7 +244,7 @@ python scripts/package.py --version 0.1.0
 **已实现**
 - 页面上下文：正文/标题/公式/选中文字/视频进度/动画状态，**跨 iframe 汇总**
 - LangGraph：Orchestrator → 条件边并行 fan-out → Verifier → HITL 闸门 → Aggregate
-- 7 个 Agent（含 `page_tutor` 页面伴学）、15 个工具
+- 7 个 Agent（含 `page_tutor` 页面伴学）、16 个工具（其中 **6 个尚无 Agent 声明**，见 `docs/17` 任务 K5）
 - 真实 SSE 事件流 + 协作轨迹可视化；`context.received` 让用户看见"读到了什么"
 - **LangGraph 原生 `interrupt()`** 人机协同（确认/修正/补充，修正**回流最终答案**）
 - 生成/验证分权：Verifier 独立复检步骤完整性、教材依据、公式定界符
@@ -230,3 +265,21 @@ python scripts/package.py --version 0.1.0
 - 用户系统（当前用浏览器本地 session id）
 - **在真实智慧树账号上的验证**（演示页是仿造的，真机验证是 P1 必修项）
 - 部署（Docker / Nginx / HTTPS）、RAGAS 自动评估
+
+### ⚠️ 已经写了、但**还没真正做到**的（契约与实现之间的差额）
+
+上面"已实现"是**能力层面**的。下面几条是**契约层面许了但实现没跟上**的，
+逐条都有实测证据，已登记在 [`contracts/INDEX.md`](contracts/INDEX.md) §六 与
+[`docs/17-模块化任务书.md`](docs/17-模块化任务书.md)：
+
+| 现象 | 任务 |
+|---|---|
+| **验证级别用户看不见**：后端已发 `verification.report`，**前端零处理**（`frontend/` 里 grep `verification` 无命中） | X1 |
+| **A/B 级恒不可达**：`verifier` 从没做过数值重算 / 符号等价性，所以所有题实际只到 C 或 D | C2 |
+| **工具门控形同虚设**：`orchestrator` 能调到它没声明的 `kb_search`（实测成功） | K1 |
+| **工具失败看不出来**：`tool.result.ok` 被硬编码为 `true`，前端红色分支永不触发 | K2 |
+| **6 个工具是死代码**：`grade_answer`（521 行 + 10 题题库 + 16 项测试）等在用户链路里用不到 | K3/K4/K5 |
+| **HITL 触发口径没定义**：判定写在代码里，契约层没说"什么该挂起" | C3 |
+
+> **"仓库能跑" ≠ "项目已达标"。** 上面这些不影响演示，但影响"M1 正确性保障链"这个卖点的成色。
+

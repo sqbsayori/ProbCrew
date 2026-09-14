@@ -10,8 +10,10 @@
 # 契约校验：scripts/check_contracts.py 用它校验 schema 与示例
 jsonschema>=4.20,<5.0
 
-# 测试（可选，当前测试也能用 python 直接跑，不需要 pytest）
-# pytest>=8.0,<9.0
+# 测试：CI 用 `python -m pytest backend/tests -q` 跑**全量**（新增测试文件自动纳入）。
+# 曾经这里是注释掉的，CI 便逐个点名文件跑 —— 于是 test_grader / test_retrieval
+# 整整两个文件从未在 CI 里执行过。跑单个文件仍可直接 `python backend/tests/xxx.py`。
+pytest>=8.0,<9.0
 
 # 说明：刻意不引入的东西
 #   - black / ruff / mypy：原型阶段不强制格式化与类型检查，
