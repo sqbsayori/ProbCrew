@@ -28,6 +28,10 @@
 """
 from __future__ import annotations
 
+from _console import utf8_output
+
+utf8_output()
+
 import argparse
 import json
 import sys
@@ -177,23 +181,21 @@ def check_event_enum(schemas: dict[str, dict]) -> None:
     )
 
     # 便捷构造器覆盖检查：每个事件类型都应有构造器（避免手拼 JSON）
-    constructors = {
-        "run.start": "run_start",
-        "context.received": "context_received",
-        "plan": "plan",
-        "agent.start": "agent_start",
-        "agent.delta": "agent_delta",
-        "agent.end": "agent_end",
-        "tool.call": "tool_call",
-        "tool.result": "tool_result",
-        "artifact": "artifact",
-        "verification.report": "verification_report",
-        "hitl.request": "hitl_request",
-        "run.end": "run_end",
-        "error": "error",
+    #
+    # 注意：函数名**由事件类型动态派生**（`tool.result` → `tool_result`），
+    # 不再硬编码清单 —— 硬编码会漏项，而漏项时这条检查会**假绿**：
+    # 曾经它只列了 13 项、漏掉 `hitl.resolved`，于是 14 种事件里缺一个构造器也照样报"全部通过"。
+    expected = {event_type: event_type.replace(".", "_") for event_type in sorted(allowed)}
+    missing = {
+        event_type: fn
+        for event_type, fn in expected.items()
+        if not callable(getattr(E, fn, None))
     }
-    missing = [fn for fn in constructors.values() if not callable(getattr(E, fn, None))]
-    check(not missing, "每种事件都有便捷构造器", f"缺：{missing}" if missing else "")
+    check(
+        not missing,
+        "每种事件都有便捷构造器",
+        "; ".join(f"{t} → 缺 {fn}()" for t, fn in sorted(missing.items())) if missing else "",
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -29,6 +29,10 @@
 """
 from __future__ import annotations
 
+from _console import utf8_output
+
+utf8_output()
+
 import argparse
 import re
 import sys
