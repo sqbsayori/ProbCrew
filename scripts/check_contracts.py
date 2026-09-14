@@ -199,10 +199,116 @@ def check_event_enum(schemas: dict[str, dict]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 4. Agent / 工具规格一致
+# 3b. 契约总目录（MANIFEST.json）不过期
 # ---------------------------------------------------------------------------
 
 
+def check_manifest(schemas: dict[str, dict]) -> None:
+    """让 contracts/MANIFEST.json 与真实 schema 保持一致。
+
+    为什么需要这条：MANIFEST.json 是「人读 INDEX.md、机器读 MANIFEST.json」里
+    机器那一份。它是**手工维护**的，因此天然会腐化 —— 加了新 schema 忘了登记、
+    加了新事件类型忘了进 catalog，都属于"文档说得对但清单里没有"的静默漂移。
+
+    这里只做**方向性**校验（schema → manifest 对齐），不校验 manifest 的措辞，
+    因为措辞是人看的，机器管不着。
+    """
+    path = CONTRACTS / "MANIFEST.json"
+    if not path.exists():
+        check(False, "contracts/MANIFEST.json 存在")
+        return
+
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        check(False, "contracts/MANIFEST.json 是合法 JSON", str(exc)[:160])
+        return
+
+    check(True, "contracts/MANIFEST.json 是合法 JSON")
+
+    # ① 每份 schema 都必须有登记条目（含自动生成的 api.md）
+    expected_files = {f"{name}" for name in schemas} | {"api.md"}
+    registered = {c.get("file") for c in manifest.get("contracts", [])}
+    missing = expected_files - registered
+    stale = registered - expected_files
+    check(
+        not missing and not stale,
+        f"MANIFEST 登记了全部 {len(expected_files)} 份契约",
+        "; ".join(
+            filter(
+                None,
+                [
+                    f"未登记：{sorted(missing)}" if missing else "",
+                    f"登记了不存在的文件：{sorted(stale)}" if stale else "",
+                ],
+            )
+        ),
+    )
+
+    # ② 状态值必须来自 lifecycle.values
+    allowed_status = set(manifest.get("lifecycle", {}).get("values", []))
+    bad_status = [
+        f"{c.get('file')}={c.get('status')}"
+        for c in manifest.get("contracts", [])
+        if c.get("status") not in allowed_status
+    ]
+    check(
+        not bad_status,
+        "MANIFEST 里每份契约的状态合法",
+        f"非法状态：{bad_status}（允许：{sorted(allowed_status)}）" if bad_status else "",
+    )
+
+    # ③ events.catalog 的类型集合必须与 events.schema.json 的 enum 完全一致
+    schema = schemas.get("events.schema.json") or {}
+    try:
+        allowed_events = set(schema["properties"]["type"]["enum"])
+    except KeyError:
+        check(False, "MANIFEST 能比对事件目录（events.schema.json 缺 type.enum）")
+        return
+
+    catalog = [e.get("type") for e in manifest.get("events", {}).get("catalog", [])]
+    catalog_set = set(catalog)
+    diff = allowed_events ^ catalog_set
+    check(
+        not diff and len(catalog) == len(catalog_set),
+        f"MANIFEST 事件目录与 schema 枚举一致（{len(allowed_events)} 种）",
+        "; ".join(
+            filter(
+                None,
+                [
+                    f"仅在 schema：{sorted(allowed_events - catalog_set)}" if allowed_events - catalog_set else "",
+                    f"仅在 MANIFEST：{sorted(catalog_set - allowed_events)}" if catalog_set - allowed_events else "",
+                    "MANIFEST 事件目录有重复项" if len(catalog) != len(catalog_set) else "",
+                ],
+            )
+        ),
+    )
+
+    # ④ total 字段不能是手写的谎话
+    declared_total = manifest.get("events", {}).get("total")
+    check(
+        declared_total == len(allowed_events),
+        "MANIFEST 的 events.total 与实际种数一致",
+        "" if declared_total == len(allowed_events) else f"写的 {declared_total}，实际 {len(allowed_events)}",
+    )
+
+    # ⑤ artifact kind 目录同理
+    try:
+        allowed_kinds = {k for k in schema["properties"]["kind"]["enum"] if k}
+    except (KeyError, TypeError):
+        allowed_kinds = set()
+    if allowed_kinds:
+        declared_kinds = set(manifest.get("artifacts", {}).get("kinds", []))
+        check(
+            declared_kinds == allowed_kinds,
+            f"MANIFEST artifact 目录与 schema 一致（{len(allowed_kinds)} 种）",
+            "" if declared_kinds == allowed_kinds else f"差异：{sorted(allowed_kinds ^ declared_kinds)}",
+        )
+
+
+# ---------------------------------------------------------------------------
+# 4. Agent / 工具规格一致
+# ---------------------------------------------------------------------------
 def check_registries(schemas: dict[str, dict], validator_cls: object) -> None:
     if validator_cls is None:
         return
@@ -250,6 +356,22 @@ def check_registries(schemas: dict[str, dict], validator_cls: object) -> None:
         if t not in tool_ids
     ]
     check(not dangling, "Agent 声明的工具都真实存在", f"悬空：{dangling}" if dangling else "")
+
+    # --- 孤儿工具：没有任何 AgentSpec 声明它 = 死代码 ---
+    #
+    # 这是一个**可见性**检查，不是门槛（K5 之前允许存在，见 docs/17 任务 K5）。
+    # 为什么要报出来：孤儿工具的危险不在"多写了代码"，而在**静默失败** ——
+    # 用户以为某个能力可用（比如批改、学习记录），实际链路里根本没人调用它。
+    # 曾经 grade_answer（521 行实现 + 10 道核验题库 + 16 项测试）就是这么躺了很久。
+    declared = {t for e in app.state.agents.all() for t in e.spec.tools}
+    orphans = sorted(tool_ids - declared)
+    if orphans:
+        skip(
+            f"孤儿工具 {len(orphans)}/{len(tool_ids)}（无 Agent 声明，用户链路里用不到）",
+            ", ".join(orphans) + "  —— 见 docs/17 任务 K5",
+        )
+    else:
+        check(True, f"无孤儿工具（{len(tool_ids)} 个工具都有 Agent 声明）")
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +459,13 @@ def main() -> int:
         print("=" * 66)
         print("  ProbCrew 契约校验")
         print("=" * 66)
+        # 把快照期打印出来：文档里的数字都是以某个 commit 为基准测的，
+        # 不写清楚基准，读者无法判断"文档过期了"还是"代码坏了"。
+        try:
+            _snap = json.loads((CONTRACTS / "MANIFEST.json").read_text(encoding="utf-8"))["snapshot"]
+            print(f"  基线快照：{_snap['branch']} @ {_snap['commit']}（{_snap['date']}）")
+        except Exception:  # noqa: BLE001 —— 缺快照不该让校验失败
+            pass
 
     section("1. schema 自洽")
     schemas = load_schemas()
@@ -348,6 +477,9 @@ def main() -> int:
 
     section("3. 事件枚举与构造器")
     check_event_enum(schemas)
+
+    section("3b. 契约总目录（MANIFEST.json）不过期")
+    check_manifest(schemas)
 
     section("4. Agent / 工具规格一致")
     check_registries(schemas, validator_cls)
