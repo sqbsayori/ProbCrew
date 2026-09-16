@@ -8,6 +8,8 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
+
+from ..kernel import auth as A
 from pydantic import BaseModel
 
 from ..domain import distributions as D
@@ -18,21 +20,21 @@ router = APIRouter(tags=["catalog"])
 
 
 @router.get("/api/agents", summary="所有已注册的 Agent（自动发现）")
-async def list_agents(request: Request) -> dict[str, Any]:
+async def list_agents(request: Request, user: A.CurrentUser) -> dict[str, Any]:
     agents: AgentRegistry = request.app.state.agents
     items = agents.describe()
     return {"count": len(items), "items": items}
 
 
 @router.get("/api/tools", summary="所有已注册的工具（自动发现）")
-async def list_tools(request: Request) -> dict[str, Any]:
+async def list_tools(request: Request, user: A.CurrentUser) -> dict[str, Any]:
     tools: ToolRegistry = request.app.state.tools
     items = tools.describe()
     return {"count": len(items), "items": items}
 
 
 @router.get("/api/animations", summary="交互动画清单")
-async def list_animations(category: str | None = None) -> dict[str, Any]:
+async def list_animations(user: A.CurrentUser, category: str | None = None) -> dict[str, Any]:
     manifest = anim_tool.load_manifest()
     items = anim_tool.all_animations()
     if category and category != "全部":
@@ -56,13 +58,13 @@ class RecommendRequest(BaseModel):
 
 
 @router.post("/api/animations/recommend", summary="按问题推荐交互动画")
-async def recommend_animation(req: RecommendRequest) -> dict[str, Any]:
+async def recommend_animation(req: RecommendRequest, user: A.CurrentUser) -> dict[str, Any]:
     matches = anim_tool.recommend(req.query, top_k=max(1, min(req.top_k, 8)))
     return {"query": req.query, "count": len(matches), "matches": matches}
 
 
 @router.get("/api/distributions", summary="可视化模块支持的分布")
-async def list_distributions() -> dict[str, Any]:
+async def list_distributions(user: A.CurrentUser) -> dict[str, Any]:
     items = D.describe_catalog()
     return {"count": len(items), "items": items}
 
@@ -70,6 +72,7 @@ async def list_distributions() -> dict[str, Any]:
 @router.get("/api/distributions/{dist}/properties", summary="分布性质（SymPy 推导）")
 async def distribution_properties(
     dist: str,
+    user: A.CurrentUser,
     n: float | None = Query(default=None),
     p: float | None = Query(default=None),
     mu: float | None = Query(default=None),
@@ -96,6 +99,7 @@ async def distribution_properties(
 @router.get("/api/distributions/{dist}/series", summary="分布绘图数据（PDF/CDF）")
 async def distribution_series(
     dist: str,
+    user: A.CurrentUser,
     mode: str = Query(default="pdf", pattern="^(pdf|cdf)$"),
     points: int = Query(default=181, ge=21, le=601),
     n: float | None = None,
@@ -122,7 +126,7 @@ async def distribution_series(
 
 
 @router.get("/api/animations/{animation_id}", summary="单个动画详情")
-async def animation_detail(animation_id: str) -> dict[str, Any]:
+async def animation_detail(animation_id: str, user: A.CurrentUser) -> dict[str, Any]:
     manifest = anim_tool.load_manifest()
     base = manifest.get("basePath", "/animations/_raw/")
     for item in anim_tool.all_animations():

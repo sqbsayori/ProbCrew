@@ -3,9 +3,13 @@
   "title": "ProbCrew 契约层总目录",
   "description": "机器可读的契约清单。只放【元数据】：每个契约是什么状态、谁负责、实现落在哪个文件、当前有哪些未落地的偏差。契约的【内容】一律不放这里 —— 以 /contracts/*.schema.json 为准，避免第二处真相。",
   "usage": "scripts/check_contracts.py 会校验：① 每个 .schema.json 都有条目 ② 每条 status 合法 ③ events.catalog 的类型集合与 events.schema.json 的 enum 完全一致。方向是『schema → manifest 对齐』，改 schema 必须同步改本文件。",
-
   "lifecycle": {
-    "values": ["draft", "frozen", "reserved", "deprecated"],
+    "values": [
+      "draft",
+      "frozen",
+      "reserved",
+      "deprecated"
+    ],
     "meaning": {
       "draft": "尚未冻结，可以自由改；改动不需要 ADR，但需要 CHANGELOG",
       "frozen": "已冻结。只增不改；破坏性变更必须走 docs/adr/ 并由 R1 批准",
@@ -13,16 +17,37 @@
       "deprecated": "已废弃，保留仅供迁移期参考；新代码不得使用"
     }
   },
-
   "snapshot": {
-    "date": "2026-09-13",
-    "branch": "dev",
-    "commit": "3ce581c",
+    "date": "2026-09-16",
+    "branch": "main",
+    "commit": "working-tree",
     "schema_draft": "http://json-schema.org/draft-07/schema#",
     "note": "改动契约时请把 date/commit 一起更新，否则 MANIFEST 会变成过期文档。"
   },
-
   "contracts": [
+    {
+      "file": "user.schema.json",
+      "version": "v1.0",
+      "title": "账号（Account）",
+      "layer": "identity",
+      "status": "frozen",
+      "owner": "R1",
+      "authority": {
+        "producer": "backend/app/tools/accounts.py",
+        "consumer": "backend/app/api/admin.py, backend/app/api/auth.py",
+        "source_of_truth": "contracts/user.schema.json"
+      },
+      "consumers": [
+        "frontend/app/core/auth.js",
+        "frontend/app/bootstrap.js",
+        "frontend/app/features/admin/index.js"
+      ],
+      "verified_by": [
+        "backend/tests/test_auth.py",
+        "backend/tests/test_admin_api.py"
+      ],
+      "notes": "账号是权限的唯一来源。additionalProperties:false 把\"不得下发 password_hash\"钉死。"
+    },
     {
       "file": "events.schema.json",
       "version": "v1.2",
@@ -62,7 +87,9 @@
         "backend/app/kernel/events.py::verification_report",
         "frontend/app/components/trace.js"
       ],
-      "verified_by": ["backend/tests/test_verifier.py"],
+      "verified_by": [
+        "backend/tests/test_verifier.py"
+      ],
       "notes": "主线对用户的承诺：绝不允许在没有验证报告的情况下输出解答。A/B/C/D 四级；每条 check 必须带 method。"
     },
     {
@@ -76,8 +103,14 @@
         "producer": "backend/app/kernel/specs.py::AgentSpec",
         "source_of_truth": "contracts/agent.schema.json"
       },
-      "consumers": ["backend/app/kernel/registry.py", "backend/app/kernel/graph.py", "frontend/app/features/architecture/index.js"],
-      "verified_by": ["scripts/check_contracts.py"],
+      "consumers": [
+        "backend/app/kernel/registry.py",
+        "backend/app/kernel/graph.py",
+        "frontend/app/features/architecture/index.js"
+      ],
+      "verified_by": [
+        "scripts/check_contracts.py"
+      ],
       "notes": "含 emits 的 6 种 artifact kind 枚举。"
     },
     {
@@ -91,8 +124,14 @@
         "producer": "backend/app/kernel/specs.py::ToolSpec",
         "source_of_truth": "contracts/tool.schema.json"
       },
-      "consumers": ["backend/app/kernel/specs.py::ToolRegistry", "backend/app/tools/*.py", "frontend/app/components/trace.js"],
-      "verified_by": ["scripts/check_contracts.py"],
+      "consumers": [
+        "backend/app/kernel/specs.py::ToolRegistry",
+        "backend/app/tools/*.py",
+        "frontend/app/components/trace.js"
+      ],
+      "verified_by": [
+        "scripts/check_contracts.py"
+      ],
       "notes": "核心是 ok / empty / available 三态：「查不到」不等于「失败」。"
     },
     {
@@ -106,8 +145,15 @@
         "producer": "backend/app/kernel/page_context.py",
         "source_of_truth": "contracts/page-context.schema.json"
       },
-      "consumers": ["backend/app/tools/page_tools.py", "frontend/widget/extractor.js", "frontend/widget/frames.js"],
-      "verified_by": ["backend/tests/test_page_context.py", "backend/tests/test_contract_events.py"],
+      "consumers": [
+        "backend/app/tools/page_tools.py",
+        "frontend/widget/extractor.js",
+        "frontend/widget/frames.js"
+      ],
+      "verified_by": [
+        "backend/tests/test_page_context.py",
+        "backend/tests/test_contract_events.py"
+      ],
       "notes": "固定了 score 的计算口径（len(text) + 40×公式 + 20×标题 + 600×选中 + 200×媒体）—— 前后端必须同口径，否则多 frame 仲裁结果会不一致。"
     },
     {
@@ -127,7 +173,7 @@
     },
     {
       "file": "attempt.schema.json",
-      "version": "v1.2",
+      "version": "v1.3",
       "title": "作答事件（Attempt）",
       "layer": "data",
       "status": "reserved",
@@ -138,7 +184,21 @@
       },
       "consumers": [],
       "verified_by": [],
-      "notes": "B 线（学生数据 / 教师端）的数据契约，B 线已挂起。先冻结是因为整条 B 线的模型都吃这张表。hint_used 与 duration_ms 不可省 —— 少了它们 BKT 会把「独立答对」与「被提示后答对」当成同一观测。"
+      "layers": [
+        {
+          "name": "① 记录层",
+          "status": "enabled",
+          "scope": "主站 X5 刷题 / X6 错题本。本地 SQLite、按匿名 session_id 归属、不出校、无 PII。",
+          "task": "X6"
+        },
+        {
+          "name": "② 建模层",
+          "status": "reserved",
+          "scope": "B线：学习者建模 / 教师端。需知情同意 + 脱敏 + 权限隔离。",
+          "task": "B线"
+        }
+      ],
+      "notes": "★ v1.3 修正：本契约拆为两层，激活状态不同。记录层**已启用**（它不依赖 B线的合规前提，与已跑起来的 qa_log 是同一性质）；建模层仍挂起。原先整份标 reserved 会把主站错题本无谓地锁在一个外部不可控资源后面。hint_used 与 duration_ms 记录层现在就必须记 —— 少了它们，将来建模层无从补救。producer 待 X5/X6 落地后填 backend/app/tools/learning_log.py。"
     },
     {
       "file": "api.md",
@@ -152,31 +212,161 @@
         "generator": "scripts/gen_api_contract.py",
         "source_of_truth": "生成的产物本身，禁止手工编辑"
       },
-      "consumers": ["frontend/widget/api.js", "frontend/app/core/api.js"],
-      "verified_by": ["scripts/check_contracts.py", ".github/workflows/ci.yml"],
+      "consumers": [
+        "frontend/widget/api.js",
+        "frontend/app/core/api.js"
+      ],
+      "verified_by": [
+        "scripts/check_contracts.py",
+        ".github/workflows/ci.yml"
+      ],
       "notes": "由脚本从 FastAPI 应用生成。手写 API 文档一定会过期。"
     }
   ],
-
   "events": {
     "catalog_version": "v1.2",
     "total": 14,
     "authority": "contracts/events.schema.json → properties.type.enum",
     "catalog": [
-      { "type": "run.start", "phase": "open", "emitter": "kernel/runner.py::stream_run", "required_fields": ["run_id", "session_id", "query"] },
-      { "type": "context.received", "phase": "open", "emitter": "kernel/runner.py::_emit_context", "required_fields": ["run_id", "summary", "data"] },
-      { "type": "plan", "phase": "route", "emitter": "kernel/graph.py::orchestrator_node", "required_fields": ["run_id", "intent", "steps"] },
-      { "type": "agent.start", "phase": "work", "emitter": "kernel/graph.py::_make_agent_node", "required_fields": ["run_id", "agent", "label"] },
-      { "type": "agent.delta", "phase": "work", "emitter": "RunContext::stream_llm", "required_fields": ["run_id", "agent", "text"] },
-      { "type": "tool.call", "phase": "work", "emitter": "RunContext::emit_tool_call", "required_fields": ["run_id", "agent", "tool", "args"] },
-      { "type": "tool.result", "phase": "work", "emitter": "RunContext::emit_tool_result", "required_fields": ["run_id", "tool", "ok", "data"] },
-      { "type": "artifact", "phase": "work", "emitter": "RunContext::emit_artifact", "required_fields": ["run_id", "kind", "payload"] },
-      { "type": "agent.end", "phase": "work", "emitter": "kernel/graph.py::_make_agent_node", "required_fields": ["run_id", "agent", "ok"] },
-      { "type": "verification.report", "phase": "verify", "emitter": "agents/verifier.py::verify", "required_fields": ["run_id", "data"] },
-      { "type": "hitl.request", "phase": "gate", "emitter": "kernel/runner.py::stream_run", "required_fields": ["run_id", "hitl_id", "agent", "draft"] },
-      { "type": "hitl.resolved", "phase": "gate", "emitter": "kernel/runner.py::resume_run", "required_fields": ["run_id", "action"] },
-      { "type": "run.end", "phase": "close", "emitter": "kernel/runner.py::_invoke", "required_fields": ["run_id", "status"] },
-      { "type": "error", "phase": "any", "emitter": "kernel/runner.py::_invoke", "required_fields": ["run_id", "message"] }
+      {
+        "type": "run.start",
+        "phase": "open",
+        "emitter": "kernel/runner.py::stream_run",
+        "required_fields": [
+          "run_id",
+          "session_id",
+          "query"
+        ]
+      },
+      {
+        "type": "context.received",
+        "phase": "open",
+        "emitter": "kernel/runner.py::_emit_context",
+        "required_fields": [
+          "run_id",
+          "summary",
+          "data"
+        ]
+      },
+      {
+        "type": "plan",
+        "phase": "route",
+        "emitter": "kernel/graph.py::orchestrator_node",
+        "required_fields": [
+          "run_id",
+          "intent",
+          "steps"
+        ]
+      },
+      {
+        "type": "agent.start",
+        "phase": "work",
+        "emitter": "kernel/graph.py::_make_agent_node",
+        "required_fields": [
+          "run_id",
+          "agent",
+          "label"
+        ]
+      },
+      {
+        "type": "agent.delta",
+        "phase": "work",
+        "emitter": "RunContext::stream_llm",
+        "required_fields": [
+          "run_id",
+          "agent",
+          "text"
+        ]
+      },
+      {
+        "type": "tool.call",
+        "phase": "work",
+        "emitter": "RunContext::emit_tool_call",
+        "required_fields": [
+          "run_id",
+          "agent",
+          "tool",
+          "args"
+        ]
+      },
+      {
+        "type": "tool.result",
+        "phase": "work",
+        "emitter": "RunContext::emit_tool_result",
+        "required_fields": [
+          "run_id",
+          "tool",
+          "ok",
+          "data"
+        ]
+      },
+      {
+        "type": "artifact",
+        "phase": "work",
+        "emitter": "RunContext::emit_artifact",
+        "required_fields": [
+          "run_id",
+          "kind",
+          "payload"
+        ]
+      },
+      {
+        "type": "agent.end",
+        "phase": "work",
+        "emitter": "kernel/graph.py::_make_agent_node",
+        "required_fields": [
+          "run_id",
+          "agent",
+          "ok"
+        ]
+      },
+      {
+        "type": "verification.report",
+        "phase": "verify",
+        "emitter": "agents/verifier.py::verify",
+        "required_fields": [
+          "run_id",
+          "data"
+        ]
+      },
+      {
+        "type": "hitl.request",
+        "phase": "gate",
+        "emitter": "kernel/runner.py::stream_run",
+        "required_fields": [
+          "run_id",
+          "hitl_id",
+          "agent",
+          "draft"
+        ]
+      },
+      {
+        "type": "hitl.resolved",
+        "phase": "gate",
+        "emitter": "kernel/runner.py::resume_run",
+        "required_fields": [
+          "run_id",
+          "action"
+        ]
+      },
+      {
+        "type": "run.end",
+        "phase": "close",
+        "emitter": "kernel/runner.py::_invoke",
+        "required_fields": [
+          "run_id",
+          "status"
+        ]
+      },
+      {
+        "type": "error",
+        "phase": "any",
+        "emitter": "kernel/runner.py::_invoke",
+        "required_fields": [
+          "run_id",
+          "message"
+        ]
+      }
     ],
     "phases": {
       "open": "一次 run 的开场",
@@ -189,14 +379,19 @@
     },
     "compatibility_rule": "前端 switch 必须有 default 分支并静默忽略未知事件类型。这是只增不改能成立的前提。"
   },
-
   "artifacts": {
     "authority": "contracts/events.schema.json → kind 枚举",
     "total": 6,
-    "kinds": ["animation", "chart", "formula", "steps", "text", "table"],
+    "kinds": [
+      "animation",
+      "chart",
+      "formula",
+      "steps",
+      "text",
+      "table"
+    ],
     "note": "新增 kind 属兼容变更（前端未注册的 kind 显示「未知产物类型」而不是崩溃）；修改已有 kind 的字段属破坏性变更。"
   },
-
   "known_gaps": [
     {
       "id": "GAP-1",
@@ -228,9 +423,9 @@
     {
       "id": "GAP-4",
       "contract": "verification.schema.json",
-      "claim": "level A 需要 sympy_recompute、level B 需要 symbolic_equivalence 这类确定性手段支撑",
-      "reality": "verifier 的 checks 里从来没有出现过这两类 method，因此按「手段封顶」规则 A/B 恒不可达。",
-      "evidence": "实测：数值题最终 level=C，证明题 level=D。级别是推导出来的，不是写死的。",
+      "claim": "level A 需要 sympy_recompute、level B 需要 symbolic_equivalence 这类确定性手段支撑，level C 需要多路交叉验证",
+      "reality": "★ **A/B/C 三级全部不可达，所有解答的实际 level 恒为 D。** verifier 的 checks 只用 heuristic 与 grounding 两类 method，且「上游执行」这一项无条件存在；按 LEVEL_CEILING 的「取最弱手段封顶」规则，heuristic 上限=D，于是任何题都被钉死在 D。confidence 因此被 LEVEL_CONFIDENCE_CAP[D] 永久封顶在 0.4。verifier.py:258 的注释「所以多数情况落在 C」是错的。",
+      "evidence": "实测：非证明类的纯数值题 verify() 返回 level=D / label=未做自动验证，请自行判断 / confidence=0.4。verifier.py 只 import re，全文件无 SymPy 调用，唯一「独立」动作是再查一次 kb_search。",
       "resolution_task": "C2",
       "status": "open"
     },
@@ -262,11 +457,26 @@
       "status": "open"
     }
   ],
-
   "pending": [
-    { "item": "契约版本号写进 schema 的 $id", "trigger": "第一次出现破坏性变更时" },
-    { "item": "error.schema.json（结构化错误码）", "trigger": "错误处理需要跨语言/跨进程区分时" },
-    { "item": "MCP 工具的契约扩展（dangerous 字段启用）", "trigger": "P2 之后接外部工具时" },
-    { "item": "attempt.schema.json 由 reserved 转为 frozen", "trigger": "B 线启动（见 docs/09 第六节）" }
+    {
+      "item": "契约版本号写进 schema 的 $id",
+      "trigger": "第一次出现破坏性变更时"
+    },
+    {
+      "item": "error.schema.json（结构化错误码）",
+      "trigger": "错误处理需要跨语言/跨进程区分时"
+    },
+    {
+      "item": "MCP 工具的契约扩展（dangerous 字段启用）",
+      "trigger": "P2 之后接外部工具时"
+    },
+    {
+      "item": "attempt.schema.json 的记录层由 X5/X6 落地（写入 backend/app/tools/learning_log.py 并补 producers/consumers）",
+      "trigger": "X5/X6 开工时"
+    },
+    {
+      "item": "attempt.schema.json 的建模层由 reserved 转为 frozen",
+      "trigger": "B 线启动（见 docs/09 第六节）"
+    }
   ]
 }
