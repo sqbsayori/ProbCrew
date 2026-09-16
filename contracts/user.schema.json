@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://probcrew.local/contracts/user.schema.json",
+  "title": "账号（Account）",
+  "description": "登录账号的对外视图。**任何接口都不得返回 password_hash** —— 本契约用 additionalProperties:false 把这条钉死：往响应里加字段会直接违反契约。账号是权限的唯一来源（服务端 kernel/auth.py），前端藏菜单不算权限。",
+  "version": "v1.0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["user_id", "username", "display_name", "role", "status", "created_at"],
+  "properties": {
+    "user_id": {
+      "type": "string",
+      "pattern": "^usr_([0-9a-f]{12}|history)$",
+      "description": "账号主键。普通账号形如 usr_ab12cd34ef56；usr_history 是迁移过来的匿名老数据的归属壳，不可登录（空哈希 + disabled）。"
+    },
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 32,
+      "description": "登录名。3–32 位，只允许 [A-Za-z0-9_.-]；中文显示名请用 display_name。大小写不敏感（COLLATE NOCASE）唯一。"
+    },
+    "display_name": {
+      "type": "string",
+      "maxLength": 64,
+      "description": "给人看的名字（可中文）。学生被删除数据后会被清空。"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["student", "admin"],
+      "description": "角色。admin 只能由种子流程或 scripts/manage_users.py 创建 —— 管理端接口与 CSV 导入都无法创建管理员（防提权）。"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "disabled", "deleted"],
+      "description": "active 正常；disabled 被管理员停用（登录 403，且已发令牌立即失效）；deleted 数据被删除后的脱敏壳（用户名已改为 deleted_xxxxxxxx）。"
+    },
+    "created_at": {
+      "type": "number",
+      "description": "创建时间（epoch 秒，float）"
+    },
+    "created_by": {
+      "type": "string",
+      "description": "创建者 user_id；'seed' = 启动时自动建的种子管理员；'cli' = 命令行建的；'migration' = 迁移脚本建的历史账号"
+    },
+    "last_login_at": {
+      "type": ["number", "null"],
+      "description": "最近一次登录成功的时间（epoch 秒）；从未登录为 null"
+    }
+  },
+  "examples": [
+    {
+      "user_id": "usr_ab12cd34ef56",
+      "username": "s01",
+      "display_name": "张三",
+      "role": "student",
+      "status": "active",
+      "created_at": 1789543027.81,
+      "created_by": "usr_9f8e7d6c5b4a",
+      "last_login_at": 1789543900.12
+    },
+    {
+      "user_id": "usr_history",
+      "username": "history",
+      "display_name": "历史匿名数据",
+      "role": "student",
+      "status": "disabled",
+      "created_at": 1789543027.81,
+      "created_by": "migration",
+      "last_login_at": null
+    }
+  ]
+}

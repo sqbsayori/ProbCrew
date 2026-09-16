@@ -46,6 +46,33 @@ def discover_routers() -> list[APIRouter]:
     return routers
 
 
+def _bootstrap_accounts() -> None:
+    """启动时准备金库账号。
+
+    做两件事，都**不阻塞启动**（库坏了也要能让 /api/health 把原因说出来）：
+    1. 库里一个管理员都没有 → 用 `ADMIN_INIT_*` 建种子管理员，并把密码打到日志；
+    2. 打印现有账号数，让"这台机器到底能不能登录"一眼可见。
+
+    ⚠️ 已有管理员时**绝不动**已有密码 —— 每次启动重置管理员密码是最糟的设计。
+    """
+    try:
+        from .kernel.auth import ensure_seed_admin
+        from .tools import accounts
+
+        created = ensure_seed_admin()
+        if created:
+            print(f"  ★ 已创建种子管理员：{created['username']}"
+                  f"  密码：{created.get('_initial_password', '')}")
+            print("     （请立刻登录并修改；改完这行日志就失去意义）")
+        users = accounts.list_users()
+        admins = [u for u in users if u["role"] == accounts.ROLE_ADMIN]
+        students = [u for u in users if u["role"] == accounts.ROLE_STUDENT]
+        print(f"  账号          : 管理员 {len(admins)} · 学生 {len(students)}")
+    except Exception as exc:  # noqa: BLE001 —— 起不来服务比"不能登录"更糟
+        print(f"  ⚠️ 账号库初始化异常：{exc}")
+        print("     登录相关接口可能不可用；请检查 DB_PATH 与文件权限。")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print("\n" + "=" * 62)
@@ -61,6 +88,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     print(f"  Frontend     : {FRONTEND_DIR}")
     print(f"  CORS 白名单   : {', '.join(settings.cors_origin_list)}")
     print(f"  学习记录库    : {settings.resolved_db_path}")
+    _bootstrap_accounts()
     if RAW_ANIMATIONS_DIR.exists():
         n = len(list(RAW_ANIMATIONS_DIR.glob("*.html")))
         print(f"  原始动画      : {RAW_ANIMATIONS_DIR}  ({n} 个 html)")

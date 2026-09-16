@@ -42,10 +42,12 @@ def _run_once(query: str) -> list[dict]:
     """真跑一次问答，返回这次运行发出去的全部事件（SSE 逐条解析）。"""
     from fastapi.testclient import TestClient
 
+    from _auth import login_client
     from app.main import app
 
     events: list[dict] = []
     with TestClient(app) as client:
+        login_client(client)  # 对话接口需要登录（账号体系）
         with client.stream(
             "POST",
             "/api/chat/stream",

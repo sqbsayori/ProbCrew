@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from ..kernel import events as E
 from ..kernel import runner
+from ..kernel import auth as A
 from ..kernel.page_context import from_payload
 from ..kernel.runs import RUNS
 
@@ -62,7 +63,7 @@ def _sse(lines: AsyncIterator[str]) -> AsyncIterator[bytes]:
 
 
 @router.post("/api/chat/stream", summary="发起一次多 Agent 协作（SSE）")
-async def chat_stream(req: ChatRequest, request: Request) -> StreamingResponse:
+async def chat_stream(req: ChatRequest, request: Request, user: A.CurrentUser) -> StreamingResponse:
     graph = request.app.state.graph
     run = RUNS.create(req.session_id, req.query)
 
@@ -75,6 +76,10 @@ async def chat_stream(req: ChatRequest, request: Request) -> StreamingResponse:
         "tools": request.app.state.tools,
         "settings": request.app.state.settings,
         "page_context": page_context,
+        #: ★ 归属：这次运行属于谁。HITL 续跑与轨迹查询都靠它做归属校验 ——
+        #: 没有它，任何登录用户拿到 run_id 就能续跑/查看别人的对话。
+        "user_id": user["user_id"],
+        "user_role": user["role"],
     }
     # 注意：context.received 事件由 kernel.runner._emit_context() 统一发出，
     # 这样任何调用方（HTTP / CLI / 测试）都能拿到同一份行为。
@@ -91,13 +96,22 @@ async def chat_stream(req: ChatRequest, request: Request) -> StreamingResponse:
     return StreamingResponse(_sse(gen()), media_type="text/event-stream", headers=SSE_HEADERS)
 
 
-@router.post("/api/hitl/{run_id}/resolve", summary="人机协同：处理待确认结论（SSE）")
-async def hitl_resolve(
-    run_id: str, req: HitlResolveRequest, request: Request
-) -> StreamingResponse:
+def _owned_run(run_id: str, user: dict[str, Any]) -> Any:
+    """取出 run 并校验归属。**不是自己的运行一律当作不存在**（不泄露"存在但无权"）。"""
     run = RUNS.get(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail=f"运行不存在或已过期：{run_id}")
+    owner = (run.runtime or {}).get("user_id")
+    if owner and owner != user.get("user_id") and user.get("role") != "admin":
+        raise HTTPException(status_code=404, detail=f"运行不存在或已过期：{run_id}")
+    return run
+
+
+@router.post("/api/hitl/{run_id}/resolve", summary="人机协同：处理待确认结论（SSE）")
+async def hitl_resolve(
+    run_id: str, req: HitlResolveRequest, request: Request, user: A.CurrentUser
+) -> StreamingResponse:
+    run = _owned_run(run_id, user)
     if run.interrupt_payload is None:
         raise HTTPException(status_code=409, detail="该运行当前没有待确认的结论")
 
@@ -122,9 +136,15 @@ async def _persist(request: Request, run: Any, session_id: str) -> None:
     if not (run.finished and run.answer):
         return
     try:
+        # ★ 归属：写 user_id（统计按账号聚合）。session_id 仍记，只作匿名追踪。
+        # 老数据（迁移前的）全挂在 usr_history 名下，不会混进任何真实学生的统计。
+        user_id = (run.runtime or {}).get("user_id") or ""
+        if not user_id:
+            return
         await request.app.state.tools.call(
             "log_qa",
             _NullCtx(run.run_id, request.app.state),
+            user_id=user_id,
             session_id=session_id,
             query=run.query,
             intent=_last_intent(run),
@@ -144,10 +164,13 @@ async def _persist(request: Request, run: Any, session_id: str) -> None:
 
 
 @router.get("/api/runs/{run_id}", summary="取回一次运行的完整事件轨迹")
-async def get_run(run_id: str) -> dict[str, Any]:
-    run = RUNS.get(run_id)
-    if run is None:
-        raise HTTPException(status_code=404, detail="运行不存在或已过期")
+async def get_run(run_id: str, user: A.CurrentUser) -> dict[str, Any]:
+    """★ 归属校验：只能看自己的运行（管理员可看全部）。
+
+    这里曾经是个实测出来的泄漏点：无鉴权时 `GET /api/runs` 会明文列出**所有人**
+    的提问原文，`/timeline` 还会回传完整答案增量。现在两条路径都以令牌为准。
+    """
+    run = _owned_run(run_id, user)
     return {
         "run_id": run.run_id,
         "session_id": run.session_id,

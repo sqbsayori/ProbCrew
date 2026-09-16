@@ -14,8 +14,10 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 
+from ..kernel import auth as A
 from ..tools import animation as anim_tool
 from ..tools import kb_search
+from . import _aggregate
 
 router = APIRouter(tags=["system"])
 
@@ -67,6 +69,8 @@ async def health(request: Request) -> dict[str, Any]:
             "agents": len(state.agents.all()),
             "tools": len(state.tools.all()),
         },
+        # 账号体系体检：部署后最常见的疑问是"这台机器能不能登录、种子管理员建了没有"
+        "accounts": _accounts_health(settings.resolved_db_path),
         "knowledge_base": {
             "sections": kb.get("section_count", 0),
             "chapters": len(kb.get("chapters", [])),
@@ -90,11 +94,42 @@ async def health(request: Request) -> dict[str, Any]:
     }
 
 
-@router.get("/api/stats/{session_id}", summary="某会话的学习统计")
-async def stats(session_id: str, request: Request, limit: int = 20) -> dict[str, Any]:
-    return await request.app.state.tools.call(
-        "learning_stats", _NullCtx(request.app.state), session_id=session_id, limit=limit
-    )
+@router.get("/api/stats/{session_id}", summary="我的学习统计（旧路径，保留兼容）")
+async def stats(session_id: str, user: A.CurrentUser, request: Request, limit: int = 20) -> dict[str, Any]:
+    """按**令牌身份**返回统计；路径里的 `session_id` 不参与取数。
+
+    ⚠️ 与 `/api/wrong/{session_id}` 同一处理：旧实现拿路径参数当身份，
+    改一个参数就能读别人的学习记录（实测确实是 200）。现在只保留 URL 形状。
+    新前端请用 `/api/me/stats`。
+    """
+    data = _aggregate.my_stats(user["user_id"], recent_limit=max(1, min(int(limit), 50)))
+    data["session_id"] = session_id
+    data["deprecated"] = "旧路径：身份已改为以令牌为准，请改用 /api/me/stats"
+    return data
+
+
+def _accounts_health(db_path: Any) -> dict[str, Any]:
+    """账号库体检。**连不上就如实说**，并且报出"有没有管理员"——
+    没有管理员意味着**谁都登不进来**，这是冷启动最常见的故障。"""
+    info: dict[str, Any] = {}
+    try:
+        from ..tools import accounts
+
+        users = accounts.list_users()
+        admins = [u for u in users if u["role"] == accounts.ROLE_ADMIN]
+        students = [u for u in users if u["role"] == accounts.ROLE_STUDENT]
+        info = {
+            "admins": len(admins),
+            "students": len(students),
+            "login_ready": len(admins) > 0,
+            "token_ttl_days": settings.auth_token_ttl_days,
+            "lock_policy": f"{settings.auth_max_failed} 次 / {settings.auth_lock_seconds} 秒",
+        }
+        if not admins:
+            info["hint"] = "库里没有管理员 —— 重启服务会自动创建种子管理员，或用 scripts/manage_users.py seed"
+    except Exception as exc:  # noqa: BLE001
+        info = {"error": f"{type(exc).__name__}: {exc}", "login_ready": False}
+    return info
 
 
 class _NullCtx:

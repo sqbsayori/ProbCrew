@@ -66,4 +66,7 @@ export const EV = {
   TOAST: 'toast',
   HEALTH: 'health:loaded',
   CATALOG: 'catalog:loaded',
+  //: 登录态变化（登录 / 登出 / 令牌失效）。监听方通常是 bootstrap：
+  //: 它要据此重画侧栏导航（角色不同，能看到的菜单不同）并跳到落地页。
+  AUTH_CHANGE: 'auth:change',
 };

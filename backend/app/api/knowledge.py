@@ -13,13 +13,15 @@ from typing import Any
 
 from fastapi import APIRouter
 
+from ..kernel import auth as A
+
 from ..tools import kb_search
 
 router = APIRouter(tags=["knowledge"])
 
 
 @router.get("/api/knowledge/chapters", summary="课程章节目录（含知识点）")
-async def chapters() -> dict[str, Any]:
+async def chapters(user: A.CurrentUser) -> dict[str, Any]:
     chapters = kb_search.outline()
     stats = await kb_search.kb_stats(ctx=None)
     return {

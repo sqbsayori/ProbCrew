@@ -16,6 +16,7 @@ utf8_output()
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -70,11 +71,33 @@ PAGE = {
 }
 
 
+#: 登录后拿到的令牌（账号体系之后，对话接口必须带认证头）
+TOKEN: str = ""
+
+
+def _headers() -> dict:
+    h = {"Content-Type": "application/json"}
+    if TOKEN:
+        h["Authorization"] = f"Bearer {TOKEN}"
+    return h
+
+
+def login(base: str, username: str, password: str, timeout: int = 20) -> str:
+    """登录并返回令牌。联调脚本必须自己先登录 —— `/api/chat/stream` 需要身份。"""
+    req = urllib.request.Request(
+        base + "/api/auth/login",
+        data=json.dumps({"username": username, "password": password}).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.load(resp)["token"]
+
+
 def post_sse(base: str, path: str, payload: dict, timeout: int = 180) -> list[dict]:
     req = urllib.request.Request(
         base + path,
         data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json"},
+        headers=_headers(),
     )
     events: list[dict] = []
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -192,6 +215,8 @@ def animation_page_context(steps: int = 3) -> dict | None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="http://127.0.0.1:8000")
+    ap.add_argument("--username", default="admin", help="用于登录的账号（默认 admin）")
+    ap.add_argument("--password", default="", help="密码；留空则读环境变量 LIVE_TEST_PASSWORD")
     args = ap.parse_args()
     base = args.base.rstrip("/")
 
@@ -203,10 +228,24 @@ def main() -> int:
         print("  请先启动：.\\scripts\\dev.ps1")
         return 2
 
+    # 登录（账号体系后对话接口需要身份）
+    global TOKEN
+    password = args.password or os.environ.get("LIVE_TEST_PASSWORD", "")
+    if not password:
+        print("✘ 需要登录才能联调：请给 --password，或设环境变量 LIVE_TEST_PASSWORD")
+        print("  （首次可用启动日志里打印的种子管理员密码，或用 manage_users.py 重置）")
+        return 2
+    try:
+        TOKEN = login(base, args.username, password)
+    except Exception as exc:  # noqa: BLE001
+        print(f"✘ 登录失败（{args.username}）：{exc}")
+        return 2
+
     print("=" * 74)
     print("  概率论伴学助手 · 真模型联调")
     print("=" * 74)
     print(f"  后端      : {base}")
+    print(f"  登录账号  : {args.username}")
     print(f"  Provider  : {health['provider']['resolved']} ({health['provider']['model']})")
     print(f"  Agents    : {health['registry']['agents']}  Tools: {health['registry']['tools']}")
     print(f"  HITL      : {health['collaboration']['hitl_enabled']}")

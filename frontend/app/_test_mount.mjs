@@ -271,8 +271,33 @@ const check2 = (name, fn) => {
 };
 
 const router = await import('./core/router.js');
+const authMod = await import('./core/auth.js');
 const assistantMod = await import('./features/assistant/index.js');
 const emptyMod = { mount: () => {}, unmount: () => {} };
+
+/**
+ * 从这一节起模拟"**已登录的学生**"。
+ *
+ * 为什么必须补这一手：加了账号体系之后，路由守卫会拦住所有业务页面 ——
+ * 未登录时 `navigate()` 根本不进 render，于是"换页回顶部"这类回归会假失败
+ * （不是代码坏了，是场景不对）。真实的用户永远是在登录态下换页的。
+ */
+function fakeLogin(role = 'student') {
+  localStorage.setItem('probstat.token', 'test-token');
+  localStorage.setItem(
+    'probstat.user',
+    JSON.stringify({
+      user_id: 'usr_test', username: 'tester', display_name: '测试同学',
+      role, status: 'active',
+    })
+  );
+}
+function fakeLogout() {
+  localStorage.removeItem('probstat.token');
+  localStorage.removeItem('probstat.user');
+}
+
+fakeLogin('student');
 
 check2('navigate() 会把滚动位置归零', () => {
   scrollCalls.length = 0;
@@ -283,6 +308,47 @@ check2('navigate() 会把滚动位置归零', () => {
     return arg && typeof arg === 'object' && arg.top === 0;
   });
   if (!ok) throw new Error(`没有以 top:0 调用 scrollTo，实际调用：${JSON.stringify(scrollCalls)}`);
+});
+
+check2('未登录时业务路由被守卫拦住（不白屏）', () => {
+  fakeLogout();
+  let mounted = false;
+  router.register(
+    { id: 'zz-guarded', title: '守卫页', route: 'zz-guarded', order: 998 },
+    { mount: () => { mounted = true; }, unmount: () => {} }
+  );
+  router.navigate('zz-guarded');
+  if (mounted) throw new Error('未登录却挂载了业务页面 —— 守卫没生效');
+  const text = [...shell.get('view-host').children].map((c) => c.allText?.() || '').join('');
+  if (!/需要登录/.test(text)) {
+    throw new Error(`守卫没有渲染提示（应出现"需要登录"），实际：${JSON.stringify(text.slice(0, 80))}`);
+  }
+  fakeLogin('student'); // 复原，后面的用例在登录态下跑
+});
+
+check2('学生进管理员路由被拦下（不挂载管理页）', () => {
+  fakeLogin('student');
+  let adminMounted = false;
+  // 注意：注册表的键是 feature 的 `id`，而导航用的是 `route` ——
+  // 真实 feature.json 里两者同名（id == route），夹具也必须照这个约定写。
+  router.register(
+    { id: 'admin', title: '管理页', route: 'admin', order: 997 },
+    { mount: () => { adminMounted = true; }, unmount: () => {} }
+  );
+  router.navigate('admin');
+  if (adminMounted) throw new Error('学生角色竟然挂载了管理员页面 —— 角色过滤没生效');
+  fakeLogin('student');
+});
+
+check2('角色规则本身：谁能进哪个路由', () => {
+  const a = authMod;
+  if (a.canEnter('admin', 'student')) throw new Error('学生不应能进 admin');
+  if (!a.canEnter('admin', 'admin')) throw new Error('管理员应能进 admin');
+  if (!a.canEnter('workbench', 'student')) throw new Error('学生应能进普通业务页');
+  if (a.canEnter('workbench', '')) throw new Error('未登录不应能进业务页');
+  if (!a.canEnter('login', '')) throw new Error('登录页应允许匿名访问');
+  if (a.defaultRoute('admin') !== 'admin') throw new Error('管理员落地页应为 admin');
+  if (a.defaultRoute('student') === 'admin') throw new Error('学生落地页不应是 admin');
 });
 
 check2('assistant 试玩/探针 iframe 关闭了滚动锚定', () => {

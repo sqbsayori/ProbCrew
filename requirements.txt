@@ -19,6 +19,11 @@ pydantic>=2.7,<3.0
 pydantic-settings>=2.3,<3.0
 python-dotenv>=1.0,<2.0
 
+# ---- 认证（账号密码只存哈希）----
+# 直接用 bcrypt，**不用 passlib**：我们只需要 hashpw / checkpw 两个函数，
+# 而 passlib 1.7.4 读 bcrypt 4.x 的 __about__ 会抛 AttributeError（噪音大）。
+bcrypt>=4.1,<5.0
+
 # ---- 符号计算（分布性质推导，数学正确性的根基）----
 sympy>=1.12,<2.0
 

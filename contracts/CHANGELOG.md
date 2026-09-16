@@ -22,6 +22,70 @@
 
 ---
 
+## [v1.4] · 2026-09-16
+
+### 新增 + 修正（账号体系落地 —— **有破坏性影响，需 ADR 追认**）
+
+- **新增 `user.schema.json` v1.0（frozen）**：账号的对外视图。
+  - 为什么：账号是权限的唯一来源，必须有契约层约束"返回什么、不返回什么"。
+    `additionalProperties:false` 直接堵住"顺手把 password_hash 下发出去"这类事故。
+  - 影响：`api/auth.py`、`api/admin.py` 的所有响应；`core/auth.js`、管理页。
+
+- **`attempt.schema.json`：`student_id` 的语义变更（破坏性）**
+  - 原：`student_id = session_id`（浏览器匿名 id）。
+  - 现：`student_id = user_id`（账号 id），并新增 `user_id` 列。
+  - 为什么：接口收紧为"必须登录"之后，身份只能来自令牌；
+    按浏览器 session 归属会让"换个浏览器"变成另一个人（统计与越权都出问题）。
+  - 影响：`student_attempt` 表加列 + 迁移脚本；`api/practice.py` 写入路径；
+    **旧数据**统一归属到不可登录的 `usr_history` 账号。
+
+- **`mastery` 聚合主键变更（破坏性）**：`(session_id, topic)` → `(user_id, topic)`
+  - 为什么：同一个人换浏览器就是另一个 session，按 session 聚合会把掌握度拆成几份。
+  - 影响：`docs/21 §5.3` 的表述、`tools/learning_log.py`、迁移脚本。
+
+- **`api.md` 重生成**：新增 `auth/*`、`me/*`、`admin/*` 共 18 个端点；
+  并标注 `/api/stats/{sid}`、`/api/wrong/{sid}` 为**旧口径**（身份以令牌为准，路径参数被忽略）。
+
+- **新增"必须登录"约束**：除 `/api/health`、`/api/auth/login`、静态资源外，全部端点需 `Authorization: Bearer`。
+  - 为什么：这是修一个**实测出来的泄漏** —— 未鉴权时 `GET /api/runs` 会明文返回所有人
+    的提问原文（L2 数据），`/api/runs/{id}/timeline` 还会回传完整答案增量（单次 36 KB）。
+
+> ⚠️ 破坏性变更应附 ADR（见 `docs/adr/`）。本次的三处修正**需要补一份 ADR**
+> （账号体系与身份口径），否则违反 `contracts/README.md` 第三节的约定。
+
+## [v1.3] · 2026-09-15
+
+### 修正（`attempt.schema.json` 拆层 —— **无破坏性结构变更**）
+
+- **`attempt.schema.json`**：把契约拆成**两层**，激活状态不同（`v1.2` → `v1.3`）
+  - **① 记录层：已启用**（主站 `X5` 刷题 / `X6` 错题本）。
+    本地 SQLite、按浏览器匿名 `session_id` 归属、不出校、无 PII。
+    **不需要知情同意，不依赖 B线** —— 它与已经跑起来的 `qa_log` 表是同一合规性质。
+  - **② 建模层：仍挂起**（B线：学习者建模 / 教师端），需知情同意 + 脱敏 + 权限隔离。
+  - **为什么改**：`v1.2` 把整份契约标为「预留 —— B线挂起，暂不实现」。
+    但 B线挂起的**真正原因**是「依赖真实学生数据（需知情同意 + 学校配合）」，
+    而**记录作答这个动作本身并不触发那个前提**。把两者绑在一起造成两个实际损失：
+    ① 主站错题本（`X6`）无谓地等一个外部不可控资源；
+    ② 将来 B线启动时，历史作答数据是空白的 —— 而 `hint_used` / `duration_ms`
+    这类字段**事后无法补录**。
+  - **结构影响：无。** 字段、`required`、`enum`、`additionalProperties` 一律未动，
+    `student_id` 在记录层取 `session_id` 同值即可满足。**没有破坏性变更，无需 ADR。**
+  - **影响谁**：`docs/17` 的 `X6` 卡片（依赖从「B线」改为「立即」）；
+    `docs/21` 的数据模型章节；`backend/app/tools/learning_log.py`（待新增 `attempt` 写入，
+    `producer` 暂留 `null`，落地后回填）。
+  - 新增 1 条 `examples`（记录层形态）；示例总数 3，`check_contracts.py` 变为 47 项。
+
+### 修正（描述文本 —— 无结构变更）
+
+- **`attempt.schema.json`**：`hint_used` 与 `source` 两处 `description` 里的 `\n`
+  之前是**字面的反斜杠 n**（json.load 后渲染成 `\n` 两个字符），改为真正的换行。
+- **`MANIFEST.json` 的 `GAP-4`**：原文写「A/B 恒不可达，实测数值题最终 level=C」——
+  **实测该结论低估了缺陷**：`heuristic` 的上限即为 D，且「上游执行」检查无条件存在，
+  因此**按最弱手段封顶后 A/B/C 三级全部不可达，所有解答恒为 D**，
+  `confidence` 永久封顶 0.4。已按实测更正 `claim` / `reality` / `evidence` 三栏。
+
+---
+
 ## [v1.2] · 2026-09-12
 
 ### 兼容新增
@@ -113,7 +177,8 @@
 
 | 事项 | 触发条件 |
 |------|---------|
-| `attempt.schema.json` 从"预留"转为"生效" | B线启动（见 `docs/09` 第六节） |
+| `attempt.schema.json` **记录层**落地（`producer` 回填 + `consumers` 登记） | `X5`/`X6` 开工时 |
+| `attempt.schema.json` **建模层**从"预留"转为"生效" | B线启动（见 `docs/09` 第六节） |
 | 契约版本号写进 schema 的 `$id` | 第一次出现破坏性变更时 |
 | `error.schema.json`（结构化错误码） | 当错误处理需要跨语言/跨进程区分时 |
 | MCP 工具的契约扩展（`dangerous` 字段启用） | P2 之后接外部工具时 |

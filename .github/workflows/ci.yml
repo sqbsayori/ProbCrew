@@ -52,7 +52,7 @@ jobs:
           pip install -r requirements.txt -r requirements-dev.txt
 
       # --- 契约校验（最重要的一项；含"前端不许写死后端地址"）---
-      - name: 契约校验（40 项）
+      - name: 契约校验（50 项）
         run: python scripts/check_contracts.py
 
       # --- API 契约是否过期 ---
@@ -72,6 +72,12 @@ jobs:
       # --- 端到端自检 ---
       - name: 端到端自检（25 项）
         run: python scripts/smoke_test.py
+
+      # --- 数据迁移状态（账号体系）---
+      # 全新 checkout 上库里什么表都没有 → 脚本会判定"无需迁移"并通过；
+      # 老库没迁完则会红。这样它既是 CI 门禁，也是运维自检。
+      - name: 账号数据迁移检查
+        run: python scripts/migrate_to_accounts.py --check
 
       # --- 单元测试（全量）---
       # 注意：曾经这里逐个点名三个文件跑（kernel / page_context / deployment，共 52 项），
@@ -179,8 +185,18 @@ jobs:
                           hits.append(f"{rel}:{i}  {desc}")
                           break
 
+          # L2 数据文件绝不允许进仓库（docs/13 约束 1）。
+          # 密钥扫描只能发现"像密钥的东西"，发现不了"学生数据被误提交"。
+          DATA_PATTERNS = [re.compile(r"\.sqlite"), re.compile(r"\.db$")]
+          data_hits = [f for f in files if any(pat.search(f) for pat in DATA_PATTERNS)]
+          if data_hits:
+              print("::error::仓库里出现了数据库文件（L2 敏感数据）")
+              for h in data_hits:
+                  print(f"  {h}")
+              hits.extend(data_hits)
+
           if hits:
-              print("::error::发现疑似密钥，请清理后重试")
+              print("::error::发现疑似密钥或敏感数据，请清理后重试")
               for h in hits:
                   print(f"  {h}")
               sys.exit(1)
