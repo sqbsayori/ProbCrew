@@ -105,15 +105,22 @@ function render(root) {
   }
   root.append(tabs);
 
-  if (state.error) {
-    root.append(h('div', { class: 'hint-box danger' }, `⚠️ ${state.error}`));
-  }
+  renderError();
 
-  const host = h('div', { id: 'admin-tab-host' });
-  root.append(host);
-  if (state.tab === 'students') renderStudents(host, root);
-  if (state.tab === 'accounts') renderAccounts(host);
-  if (state.tab === 'audit') renderAudit(host);
+  // 错误提示放**独立槽位**：数据回来时只重绘 tab 内容，错误也得跟着刷新，
+  // 否则后端挂掉时用户看到的是"骨架屏 + 空统计卡"，看不到失败原因（实测踩到）。
+  const errorHost = h('div', { id: 'admin-error-host' });
+  root.append(errorHost);
+  state.errorHost = errorHost;
+
+  const tabHost = h('div', { id: 'admin-tab-host' });
+  root.append(tabHost);
+  // ★ 存引用而不是每次 querySelector 去捞：少一次 DOM 查询，也让本页在
+  //   没有 querySelector 的环境（无浏览器测试桩）里仍然能局部重绘。
+  state.tabHost = tabHost;
+  if (state.tab === 'students') renderStudents(tabHost, root);
+  if (state.tab === 'accounts') renderAccounts(tabHost);
+  if (state.tab === 'audit') renderAudit(tabHost);
 }
 
 function reload(root) {
@@ -122,7 +129,7 @@ function reload(root) {
   state.accounts = null;
   state.audit = null;
   state.error = '';
-  render(root);
+  render(root); // render() 内会 renderError() 清掉提示
   loadOverview(root);
   if (state.tab === 'students') loadStudents(root);
   if (state.tab === 'accounts') loadAccounts(root);
@@ -134,22 +141,32 @@ function reload(root) {
  * ------------------------------------------------------------------ */
 
 async function loadOverview(root) {
+  // ★ await 之后 state 可能已被 unmount() 置空 —— 必须重新判活。
+  //   不判的话，"离开页面时正好有请求在飞"会在控制台抛
+  //   TypeError: Cannot set properties of null（实测踩到过；仓库里 assistant 页也踩过同类）。
   try {
-    state.overview = await api.adminOverview();
+    const data = await api.adminOverview();
+    if (!state) return;
+    state.overview = data;
     renderCurrent(root);
   } catch (err) {
+    if (!state) return;
     state.error = `统计加载失败：${err.message}`;
     renderCurrent(root);
   }
 }
 
 async function loadStudents(root) {
+  const query = {
+    page: state.page, page_size: state.pageSize, q: state.q,
+    sort: state.sort, order: state.order,
+  };
   try {
-    state.students = await api.adminStudents({
-      page: state.page, page_size: state.pageSize, q: state.q,
-      sort: state.sort, order: state.order,
-    });
+    const data = await api.adminStudents(query);
+    if (!state) return;
+    state.students = data;
   } catch (err) {
+    if (!state) return;
     state.error = `学生列表加载失败：${err.message}`;
   }
   renderCurrent(root);
@@ -158,8 +175,11 @@ async function loadStudents(root) {
 async function loadAccounts(root) {
   try {
     // 账号 tab 只读：管理员账号由 CLI 维护，页面不提供增删改
-    state.accounts = await api.adminStudents({ page: 1, page_size: 100, sort: 'created_at' });
+    const data = await api.adminStudents({ page: 1, page_size: 100, sort: 'created_at' });
+    if (!state) return;
+    state.accounts = data;
   } catch (err) {
+    if (!state) return;
     state.error = `账号列表加载失败：${err.message}`;
   }
   renderCurrent(root);
@@ -167,16 +187,30 @@ async function loadAccounts(root) {
 
 async function loadAudit(root) {
   try {
-    state.audit = await api.adminAudit({ page: 1, page_size: 100 });
+    const data = await api.adminAudit({ page: 1, page_size: 100 });
+    if (!state) return;
+    state.audit = data;
   } catch (err) {
+    if (!state) return;
     state.error = `审计加载失败：${err.message}`;
   }
   renderCurrent(root);
 }
 
+/** 刷新错误提示槽（整页渲染与局部重绘都调它） */
+function renderError() {
+  if (!state?.errorHost) return;
+  clear(state.errorHost);
+  if (state.error) {
+    state.errorHost.append(h('div', { class: 'hint-box danger' }, `⚠️ ${state.error}`));
+  }
+}
+
 /** 只重画当前 tab（避免每次数据回来都把 tab 条重建、把输入框焦点弄丢） */
 function renderCurrent(root) {
-  const host = root.querySelector?.('#admin-tab-host');
+  if (!state) return; // 已卸载：丢弃结果，不要往 null 上写
+  renderError();
+  const host = state.tabHost || root.querySelector?.('#admin-tab-host');
   if (!host) return;
   if (state.tab === 'students') renderStudents(host, root);
   if (state.tab === 'accounts') renderAccounts(host);
@@ -557,7 +591,7 @@ function openImport(root) {
       h('span', { class: 'muted small' }, '最多 500 行 / 256 KB')),
     result);
 
-  const host = root.querySelector?.('#admin-tab-host');
+  const host = state?.tabHost || root.querySelector?.('#admin-tab-host');
   if (host) {
     clear(host);
     host.append(panel);

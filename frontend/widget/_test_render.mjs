@@ -23,7 +23,12 @@ globalThis.document = {
   head: { appendChild() {} },
 };
 
-// 加载真实模块
+// 加载真实模块 —— **顺序必须与 _modules.json 一致**：
+// _shared.js（共享内核产物）在前，render.js 在后。render.js 是薄适配层，
+// 它从 __PSA.shared 取实现；顺序错了会明确报错（这正是我们想要的失败方式）。
+const sharedSrc = readFileSync(join(here, '_shared.js'), 'utf8');
+new Function('window', 'document', 'console', sharedSrc)(win, globalThis.document, console);
+
 const src = readFileSync(join(here, 'render.js'), 'utf8');
 new Function('window', 'document', 'console', src)(win, globalThis.document, console);
 
@@ -53,7 +58,7 @@ console.log('=== LaTeX 定界符归一化 ===');
 check(
   '行内 \\(...\\) → 变成公式占位符',
   '在 \\(B\\) 发生的条件下，成因 \\(A_i\\) 的概率是后验概率。',
-  ['class="psa-math-inline"', 'data-tex="B"', 'data-tex="A_i"'],
+  ['class="math-inline"', 'data-tex="B"', 'data-tex="A_i"'],
   ['\\(', '\\)']
 );
 
@@ -61,7 +66,7 @@ check(
 check(
   '独立 \\[...\\] → 变成块级公式占位符',
   '公式：\\[ P(A_i\\mid B)=\\frac{P(A_i)P(B\\mid A_i)}{\\sum_j P(A_j)P(B\\mid A_j)} \\]',
-  ['class="psa-math-block"', 'P(A_i\\mid B)'],
+  ['class="math-block"', 'P(A_i\\mid B)'],
   ['\\[', '\\]']
 );
 
@@ -69,12 +74,12 @@ check(
 check(
   '原有 $...$ 保持可用',
   '已知 $P(B)>0$ 时成立。',
-  ['class="psa-math-inline"', 'data-tex="P(B)&gt;0"']
+  ['class="math-inline"', 'data-tex="P(B)&gt;0"']
 );
 check(
   '原有 $$...$$ 保持可用',
   '$$P(A)=\\sum_i P(B_i)P(A\\mid B_i)$$',
-  ['class="psa-math-block"', 'P(A)=\\sum_i']
+  ['class="math-block"', 'P(A)=\\sum_i']
 );
 
 // 4) 普通文本不能被误伤
@@ -89,7 +94,7 @@ check(
 check(
   '同一段里混用两种定界符',
   '先看 \\(P(A)\\)，再看 $$P(B)=\\sum_i P(A_i)P(B\\mid A_i)$$，最后 $x^2$。',
-  ['data-tex="P(A)"', 'class="psa-math-block"', 'data-tex="x^2"'],
+  ['data-tex="P(A)"', 'class="math-block"', 'data-tex="x^2"'],
   ['\\(', '\\[']
 );
 

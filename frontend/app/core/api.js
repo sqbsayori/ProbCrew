@@ -9,6 +9,7 @@
  */
 import { bus, EV } from './bus.js';
 import { authHeaders, handleUnauthorized } from './auth.js';
+import { consumeSSE as sharedConsumeSSE } from '../../shared/sse.js';
 
 /** 统一 JSON 请求
  *
@@ -55,41 +56,14 @@ export const deleteJSON = (path) => request(path, { method: 'DELETE' });
  * @param {(event:object)=>void} onEvent
  * @param {AbortSignal} [signal]
  */
-async function consumeSSE(res, onEvent, signal) {
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder('utf-8');
-  let buffer = '';
-
-  try {
-    for (;;) {
-      if (signal?.aborted) break;
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-
-      let idx;
-      while ((idx = buffer.indexOf('\n\n')) >= 0) {
-        const frame = buffer.slice(0, idx);
-        buffer = buffer.slice(idx + 2);
-        for (const line of frame.split('\n')) {
-          if (!line.startsWith('data:')) continue;
-          const raw = line.slice(5).trim();
-          if (!raw || raw === '{}') continue;
-          try {
-            onEvent(JSON.parse(raw));
-          } catch (err) {
-            console.warn('[api] 事件解析失败', raw, err);
-          }
-        }
-      }
-    }
-  } finally {
-    try {
-      await reader.cancel();
-    } catch {
-      /* 忽略 */
-    }
-  }
+/**
+ * 消费 SSE 流 —— **转发共享内核**（`shared/sse.js`）。
+ *
+ * 协议解析以前在这里有一份、widget 里又有一份，且已经漂移（一个 async-for、
+ * 一个 promise-pump）。现在两边共用同一份实现（见 `docs/23` §1）。
+ */
+function consumeSSE(res, onEvent, signal) {
+  return sharedConsumeSSE(res, onEvent, { signal });
 }
 
 async function openSSE(path, body, onEvent, signal) {
