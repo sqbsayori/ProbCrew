@@ -239,6 +239,9 @@ python scripts/gen_registry.py --check # 前端注册表一致性
 node frontend/app/_test_mount.mjs      # 页面挂载（改前端必跑）
 node frontend/widget/_test_render.mjs  # 渲染器
 node frontend/widget/_test_deploy.mjs  # 部署无关化
+node frontend/shared/_test_shared.mjs  # 共享内核 + 主站/悬浮窗等价性
+python scripts/build_widget.py --check # 悬浮窗共享产物是否新鲜（改 shared/ 必跑）
+python scripts/gen_events_js.py --check # 事件常量是否与契约一致
 python scripts/live_test.py            # 真模型联调（需服务已启动）
 ```
 

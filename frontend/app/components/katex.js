@@ -8,6 +8,10 @@
  * 用法：先 `await loadKatex()`，插入 HTML 后再 `renderMathIn(container)`。
  */
 import { getJSON } from '../core/api.js';
+import {
+  renderMathIn as sharedRenderMathIn,
+  texToHtml as sharedTexToHtml,
+} from '../../shared/math.js';
 
 let readyPromise = null;
 
@@ -37,38 +41,21 @@ export function loadKatex() {
 }
 
 /** 同步渲染单个公式为 HTML 字符串。KaTeX 未就绪时退化为转义后的源码。 */
+/**
+ * 渲染单个公式为 HTML 字符串（转发共享内核；KaTeX 未就绪时降级为转义源码）。
+ *
+ * ⚠️ 导出名与签名保持不变，调用方零改动。
+ */
 export function texToHtml(tex, displayMode = false) {
-  const katex = window.katex;
-  if (!katex) {
-    return `<code class="mono">${String(tex).replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]))}</code>`;
-  }
-  try {
-    return katex.renderToString(tex, {
-      displayMode,
-      throwOnError: false,
-      errorColor: '#ef4444',
-      strict: 'ignore',
-      trust: false,
-      macros: { '\\RR': '\\mathbb{R}' },
-    });
-  } catch (err) {
-    console.warn('[katex] 渲染失败', tex, err);
-    return `<code class="mono" style="color:var(--danger)">${tex}</code>`;
-  }
+  return sharedTexToHtml(tex, displayMode, typeof window !== 'undefined' ? window.katex : null);
 }
 
 /**
- * 把容器里所有占位符（由 markdown.js 生成）渲染成真公式。
- * 占位符：<span class="math-inline|math-block" data-tex="...">
+ * 把容器里所有占位符（由 shared/markdown.js 生成）渲染成真公式。
+ * 占位符类名：`.math-inline` / `.math-block`（与悬浮窗完全一致）。
  */
 export function renderMathIn(root) {
-  if (!root) return;
-  root.querySelectorAll('.math-inline, .math-block').forEach((el) => {
-    const tex = el.dataset.tex || '';
-    const display = el.classList.contains('math-block');
-    el.innerHTML = texToHtml(tex, display);
-    el.classList.add('math-rendered');
-  });
+  return sharedRenderMathIn(root, { katex: typeof window !== 'undefined' ? window.katex : null });
 }
 
 /**

@@ -149,7 +149,7 @@
         style:
           'padding:6px 8px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;margin-top:5px;overflow-x:auto',
       });
-      box.innerHTML = '<span class="psa-math-block" data-tex="' + PSA.render.esc(tex) + '"></span>';
+      box.innerHTML = '<span class="math-block" data-tex="' + PSA.render.esc(tex) + '"></span>';
       wrap.appendChild(box);
     });
     PSA.render.mathIn(wrap);

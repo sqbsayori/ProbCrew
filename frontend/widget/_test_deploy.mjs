@@ -227,7 +227,24 @@ check(
 check(pinMatch[1] === '', '源码的 API_BASE_PIN 是空的（发布物才填）');
 
 const requires = [...source.matchAll(/^\s*\/\/\s*@require\s+(\S+)\s*$/gm)].map((m) => m[1]);
-check(requires.length === 7, `@require 是 7 条`, requires.join(', '));
+
+// @require 清单**不以条数为准**，而是必须与生成产物 _modules.json 一致
+// （docs/23 §四：清单由 scripts/build_widget.py 生成，油猴脚本由 CI 校验它跟上了）。
+// 以前这里写死"7 条"，一加共享内核就报"失败"—— 那条断言守的是数字，不是事实。
+const manifest = JSON.parse(readFileSync(join(ROOT, 'frontend', 'widget', '_modules.json'), 'utf8'));
+const missing = manifest.ui.filter((m) => !requires.includes(m));
+const extra = requires.filter((r) => !manifest.ui.includes(r));
+check(
+  missing.length === 0,
+  `@require 覆盖了清单里的全部 ${manifest.ui.length} 个模块`,
+  missing.length ? `缺：${missing.join(', ')}` : requires.join(', ')
+);
+check(extra.length === 0, '@require 没有清单之外的模块', extra.join(', ') || '（无多余项）');
+check(
+  requires[0] === manifest.shared,
+  '共享内核 _shared.js 排在第一（后面的模块要从 __PSA.shared 取实现）',
+  `实际第一条：${requires[0]}`
+);
 check(
   requires.every((r) => r.startsWith('/') && !/^[a-z]+:\/\//i.test(r)),
   '@require 全部是相对路径',

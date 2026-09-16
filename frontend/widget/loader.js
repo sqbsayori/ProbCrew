@@ -84,22 +84,9 @@
    * 否则每个 iframe 里都会冒出一个悬浮球（智慧树一页能有十几个 frame）。
    * 子框架的职责只有一个：装好上下文应答器，把自己的内容上报给顶层。
    */
-  var MODULES_UI = [
-    '/widget/api.js',
-    '/widget/pet.js',
-    '/widget/render.js',
-    '/widget/anim-bridge.js',
-    '/widget/extractor.js',
-    '/widget/frames.js',
-    '/widget/assistant.js',
-  ];
-  var MODULES_FRAME = [
-    '/widget/render.js',
-    '/widget/anim-bridge.js',
-    '/widget/extractor.js',
-    '/widget/frames.js',
-  ];
-
+  // 模块清单**不再手写**：由 `scripts/build_widget.py` 生成 frontend/widget/_modules.json，
+  // 运行期读它。以前这里是一份手写数组、油猴脚本里还有一份 @require 列表，
+  // 改个文件名就会漏改一处（见 docs/23 §四）。
   function isTopFrame() {
     try {
       return window.top === window.self;
@@ -164,14 +151,27 @@
     }
   }
 
-  var modules = isTopFrame() ? MODULES_UI : MODULES_FRAME;
+  function loadManifest() {
+    var manUrl = BASE + '/widget/_modules.json';
+    if (typeof fetch !== 'function') {
+      return Promise.reject(new Error('环境不支持 fetch，无法读模块清单'));
+    }
+    return fetch(manUrl, { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('模块清单加载失败 HTTP ' + r.status);
+      return r.json();
+    });
+  }
 
-  modules
-    .reduce(function (chain, src) {
-      return chain.then(function () {
-        return loadOne(src);
-      });
-    }, Promise.resolve())
+  loadManifest()
+    .then(function (man) {
+      // 顶层页面要全部模块；iframe 只要最小集合（省内存）
+      var modules = isTopFrame() ? man.ui : man.frame;
+      return modules.reduce(function (chain, src) {
+        return chain.then(function () {
+          return loadOne(src);
+        });
+      }, Promise.resolve());
+    })
     .then(function () {
       if (isTopFrame()) boot();
       else bootFramesOnly();
