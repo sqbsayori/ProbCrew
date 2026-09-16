@@ -240,6 +240,68 @@ for (const f of features) {
 console.log(failed === 0 ? `\n全部页面通过（${features.length}/${features.length}）` : `\n${failed} 个页面失败`);
 
 /* ------------------------------------------------------------------ *
+ * 管理页：关键区块必须真的渲染出来
+ * ------------------------------------------------------------------ *
+ * "能挂载"只证明没抛错。管理页是**唯一能删学生数据**的页面，
+ * 它白屏或少了二次确认，代价比别的页高得多。所以这里钉住它的结构：
+ * 标题、三个 tab、四张统计卡、以及"加载失败不白屏"。
+ *
+ * 注意：夹具里 fetch 一律 reject（见文件头），所以本页会走到错误分支 ——
+ * 这恰好是"后端没起时页面什么样"的真实场景，也正好该被断言。
+ */
+console.log('\n=== 管理页：关键区块 ===');
+{
+  // 以管理员身份渲染（守卫只看角色，不看令牌真假；这里给个假的管理员）
+  localStorage.setItem('probstat.token', 'test-token');
+  localStorage.setItem(
+    'probstat.user',
+    JSON.stringify({ user_id: 'usr_test', username: 't_admin', display_name: '管理员', role: 'admin', status: 'active' })
+  );
+
+  const host = new StubNode('div');
+  body.append(host);
+  const admin = await import(pathToFileURL(join(HERE, 'features', 'admin', 'index.js')).href);
+  admin.mount(host, mountCtx);
+
+  // ★ 必须等一拍：mount() 同步渲染骨架，数据是异步拉的。
+  //   不等的话读到的是"加载中"那一帧，会误报"缺内容"（第一次跑就踩到了）。
+  for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+  const text = host.allText();
+
+  const must = {
+    '页面标题': '学生数据管理',
+    'tab 学生': '学生',
+    'tab 账号': '账号',
+    'tab 审计': '审计',
+    '统计卡·学生数': '学生数',
+    '统计卡·总作答': '总作答',
+    '统计卡·平均正确率': '平均正确率',
+    '批量导入入口': '批量导入',
+    '导出入口': '导出 CSV',
+    // 注：「账号」tab 里的 CLI 说明不在默认视图里 —— 那是切 tab 才渲染的，这里不断言
+  };
+  let miss = 0;
+  for (const [what, needle] of Object.entries(must)) {
+    if (!text.includes(needle)) {
+      miss++;
+      console.log(`  ✘ 缺少${what}（找不到 "${needle}"）`);
+    }
+  }
+  if (text.trim().length < 100) {
+    miss++;
+    console.log(`  ✘ 管理页内容过少（${text.trim().length} 字）—— 后端不可用时应渲染错误提示而不是白屏`);
+  }
+  if (!/加载失败|无法|⚠️/.test(text)) {
+    miss++;
+    console.log('  ✘ 后端不可用时没有给出人话提示（应为"加载失败"类文案）');
+  }
+  if (miss === 0) console.log(`  ✔ 结构完整（${text.trim().length} 字，${Object.keys(must).length} 项关键区块）`);
+  failed += miss;
+  admin.unmount?.();
+  host.remove();
+}
+
+/* ------------------------------------------------------------------ *
  * 回归：换页必须回到顶部
  * ------------------------------------------------------------------ *
  * 症状（用户实际报过）：点侧栏「页面助手」，页面直接落在中下部的试玩 iframe 上，
