@@ -1,0 +1,273 @@
+/* ============================================================================
+   页面模板层（Page Template）
+   ----------------------------------------------------------------------------
+   给"主站功能页"共用的一套骨架与组件类。谁做哪个页面，都从这里取类名，
+   不要各写一套 —— 4 个人拼起来才长得一样。
+
+   分工落点（Sprint 1）：
+     登录页        → .login-wrap / .login-card / .field / .login-error
+     刷题 + 错题本 → .page-head / .toolbar / .list / .data-table / .progress
+     知识库页      → .page-head / .section-title / .grid + 现有 .card / .anim-card
+     掌握情况 + 学生数据管理 → .stat-grid / .data-table / .empty-state
+
+   三条约定：
+     1. **颜色、圆角、阴影一律用 tokens.css 的变量**，这里不出现新的色值。
+        改主题只改 tokens.css，改这里就等于绕过了主题层。
+     2. 这些类名是全站共享的。**要改先在这里改**，不要在页面自己的
+        styles.css 里覆盖同名类（会变成两个人抢一个选择器）。
+     3. 已有能力优先复用，别重造：
+        按钮 .btn/.btn-primary/.btn-sm ｜ 表单控件 .input/.select/.textarea
+        卡片 .card/.card-title ｜ 网格 .grid/.grid-2/.grid-3/.grid-4
+        标签 .tag/.tag-green/.tag-amber/.tag-red/.tag-gray ｜ 表格外框 .table-wrap
+        空提示 .empty ｜ 状态点 .badge-dot + .dot-ok/.dot-warn
+   ========================================================================== */
+
+/* ============================================================================
+   1. 页头 —— 每个功能页的第一块
+   用法：
+     <div class="page-head">
+       <div class="page-head-main">
+         <h1 class="page-head-title">刷题</h1>
+         <p class="page-head-sub">按知识点选题，答错自动进错题本</p>
+       </div>
+       <div class="page-head-actions"><button class="btn btn-primary">开始刷题</button></div>
+     </div>
+   为什么不用 .wb-hero：那是有装饰性大图的横幅，只适合工作台/架构页；
+   功能页要的是"一眼看清这是什么页 + 主操作在哪"。
+   ========================================================================== */
+.page-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.page-head-main { min-width: 0; }
+.page-head-title { font-size: 21px; font-weight: 600; letter-spacing: 0.2px; }
+.page-head-sub { font-size: 13px; color: var(--text-3); margin-top: 4px; }
+.page-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* 面包屑：只有二级页（如"错题本 → 某道题"）才用 */
+.crumb { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-3); margin-bottom: 6px; }
+.crumb a { color: var(--text-2); }
+.crumb .sep { color: var(--border-strong); }
+
+/* 区块小标题：一个页面里有 2 个以上区块时用 */
+.section-title {
+  font-size: 14.5px; font-weight: 600; margin: 22px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title .sub { font-size: 12px; color: var(--text-3); font-weight: 400; }
+.section-title:first-child { margin-top: 0; }
+
+/* ============================================================================
+   2. 工具栏 / 筛选条 —— 放在页头下面、内容上面
+   ========================================================================== */
+.toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 12px; margin-bottom: 14px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.toolbar-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.toolbar-label { font-size: 12.5px; color: var(--text-3); }
+.toolbar-spacer { flex: 1; }
+.toolbar .input, .toolbar .select { width: auto; min-width: 140px; padding: 7px 10px; font-size: 13px; }
+
+/* ============================================================================
+   3. 登录页 —— 独立布局，**不套侧栏外壳**
+   用法：登录页自己占满整屏，用 .login-wrap 居中一张卡。
+   ========================================================================== */
+.login-wrap {
+  min-height: 100vh; display: grid; place-items: center; padding: 24px;
+  background: linear-gradient(135deg, #eef2ff 0%, var(--bg) 45%, #f5f3ff 100%);
+}
+.login-card {
+  width: 100%; max-width: 400px; padding: 30px 30px 24px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+}
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.login-mark {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 20px; color: #fff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+}
+.login-title { font-size: 17px; font-weight: 600; }
+.login-sub { font-size: 12.5px; color: var(--text-3); margin-top: 2px; }
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.login-form .btn { width: 100%; padding: 11px; font-size: 14px; }
+/* 登录失败提示：默认隐藏，出错时加 .show */
+.login-error {
+  display: none; padding: 9px 12px; border-radius: var(--radius-sm);
+  background: var(--danger-bg); border: 1px solid #fecaca;
+  color: #b91c1c; font-size: 12.5px; line-height: 1.6;
+}
+.login-error.show { display: block; }
+.login-foot {
+  margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--border);
+  font-size: 12px; color: var(--text-3); line-height: 1.7;
+}
+.login-alt { margin-top: 12px; font-size: 12.5px; text-align: center; color: var(--text-3); }
+
+/* ============================================================================
+   4. 表单字段 —— 带标签、帮助文字、错误态
+   （.input/.select/.textarea 已在 app.css，这里只补"字段"这一层）
+   ========================================================================== */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.field-label .req { color: var(--danger); margin-left: 2px; }
+.field-hint { font-size: 12px; color: var(--text-3); }
+/* 错误文字：默认隐藏，加 .show 才显示（避免布局跳动） */
+.field-error { display: none; font-size: 12px; color: var(--danger); }
+.field-error.show { display: block; }
+/* 输入框错误态 */
+.input.is-error, .select.is-error, .textarea.is-error { border-color: var(--danger); }
+.input.is-error:focus, .textarea.is-error:focus { box-shadow: 0 0 0 3px var(--danger-bg); }
+.field-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+/* ============================================================================
+   5. 统计卡 —— 掌握情况 / 学生数据管理页顶部
+   ========================================================================== */
+.stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.stat-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;
+}
+.stat-label { font-size: 12.5px; color: var(--text-3); }
+.stat-value { font-size: 26px; font-weight: 600; line-height: 1.2; letter-spacing: -0.5px; }
+.stat-unit { font-size: 13px; font-weight: 400; color: var(--text-3); margin-left: 3px; }
+/* 变化量：涨用绿、跌用红。**注意**：对"错题数"这类指标跌才是好事，
+   方向语义由页面自己决定，这里只管颜色。 */
+.stat-delta { font-size: 12px; color: var(--text-3); }
+.stat-delta.up { color: var(--success); }
+.stat-delta.down { color: var(--danger); }
+
+/* 进度条：掌握度、正确率都能用 */
+.progress { height: 7px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.progress > i { display: block; height: 100%; border-radius: 999px; background: var(--primary); transition: var(--transition); }
+.progress.is-good > i { background: var(--success); }
+.progress.is-warn > i { background: var(--warning); }
+.progress.is-bad  > i { background: var(--danger); }
+
+/* ============================================================================
+   6. 列表行 —— 题目列表 / 错题本 / 学生列表（比表格更适合"带操作的行"）
+   用法：
+     <div class="list">
+       <div class="list-row">
+         <div class="list-row-main">
+           <div class="list-row-title">贝叶斯公式 · 疾病检测</div>
+           <div class="list-row-meta"><span class="tag tag-gray">ch01</span> …</div>
+         </div>
+         <div class="list-row-actions"><button class="btn btn-sm">开始</button></div>
+       </div>
+     </div>
+   ========================================================================== */
+.list { display: flex; flex-direction: column; gap: 8px; }
+.list-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; background: var(--card);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+.list-row:hover { border-color: var(--border-strong); }
+.list-row.is-active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.list-row.is-wrong { border-left: 3px solid var(--danger); }
+.list-row.is-done { border-left: 3px solid var(--success); }
+.list-row-main { flex: 1; min-width: 0; }
+.list-row-title { font-size: 14px; font-weight: 500; }
+.list-row-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 5px; font-size: 12px; color: var(--text-3); }
+.list-row-actions { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.list-row-right { text-align: right; flex-shrink: 0; font-size: 12.5px; color: var(--text-3); }
+
+/* ============================================================================
+   7. 表格增强 —— 学生数据管理 / 答题记录
+   基础表格样式在 app.css 的 table.data，这里只补"数据表"常用的三件事。
+   ========================================================================== */
+.data-table th.col-num, .data-table td.col-num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table th.col-actions, .data-table td.col-actions { text-align: right; white-space: nowrap; }
+.data-table tr.row-clickable { cursor: pointer; transition: var(--transition); }
+.data-table tr.row-clickable:hover { background: #f8fafc; }
+
+/* 分页条 */
+.pager { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.pager-info { font-size: 12.5px; color: var(--text-3); margin-right: auto; }
+
+/* ============================================================================
+   8. 空状态 / 加载态 —— 每个页面都必须有，否则页面出错时是一片空白
+   ========================================================================== */
+.empty-state { padding: 44px 20px; text-align: center; }
+.empty-state-ico { font-size: 34px; line-height: 1; margin-bottom: 10px; opacity: 0.55; }
+.empty-state-title { font-size: 14.5px; font-weight: 600; color: var(--text-2); }
+.empty-state-text { font-size: 13px; color: var(--text-3); margin-top: 6px; line-height: 1.7; }
+.empty-state .btn { margin-top: 14px; }
+
+/* 骨架屏：加载中先用它占位，别用空白页 */
+.skeleton {
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, #eef2f7 25%, #e2e8f0 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+.skeleton-line { height: 13px; margin-bottom: 10px; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-40 { width: 40%; }
+.skeleton-block { height: 120px; }
+@keyframes skeleton-shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+/* 行内小转圈：按钮上"提交中…"用 */
+.spinner {
+  width: 14px; height: 14px; border-radius: 50%; display: inline-block;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ============================================================================
+   9. 角色标识 —— 学生 / 管理员
+   ⚠️ 这只负责"长得不一样"。**权限必须在服务端校验**：
+      前端把菜单藏起来不算权限控制（任何人都能直接敲接口地址）。
+   ========================================================================== */
+.role-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 500;
+  background: var(--primary-light); color: var(--primary-dark);
+}
+.role-badge.admin { background: #fef3c7; color: #92400e; }
+.role-badge.guest { background: #f1f5f9; color: var(--text-2); }
+
+/* 顶栏里的当前用户块 */
+.user-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+.user-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 12.5px; font-weight: 600;
+  color: #fff; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+/* ============================================================================
+   10. 通用小件
+   ========================================================================== */
+.divider { height: 1px; background: var(--border); margin: 16px 0; border: 0; }
+.hint-box {
+  padding: 11px 14px; border-radius: var(--radius-sm);
+  background: var(--info-bg); border: 1px solid #bae6fd;
+  font-size: 12.5px; color: #075985; line-height: 1.7;
+}
+.hint-box.warn { background: var(--warning-bg); border-color: #fcd34d; color: #92400e; }
+.hint-box.danger { background: var(--danger-bg); border-color: #fecaca; color: #b91c1c; }
+
+/* ============================================================================
+   11. 响应式 —— 与学生端手机浏览器相关（课程平台上有手机用户）
+   ========================================================================== */
+@media (max-width: 1024px) {
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .page-head { align-items: flex-start; }
+  .page-head-actions { width: 100%; }
+  .stat-grid { grid-template-columns: minmax(0, 1fr); }
+  .field-row { grid-template-columns: minmax(0, 1fr); }
+  .list-row { align-items: flex-start; flex-direction: column; }
+  .list-row-actions { width: 100%; }
+  .login-card { padding: 24px 20px 20px; }
+}
