@@ -18,10 +18,24 @@
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HERE, '..');
+
+/**
+ * ⚠️ 动态 import 必须走 `pathToFileURL().href`，**不能直接塞文件路径**。
+ *
+ * Node 的 ESM loader 只接受 `file:` / `data:` / `node:` 三种 scheme。
+ * 在 Linux 上 `import('/abs/path.js')` 侥幸可用，在 Windows 上
+ * `C:\...` 会被解析成 scheme `c:`，直接抛：
+ *
+ *     ERR_UNSUPPORTED_ESM_URL_SCHEME: Received protocol 'c:'
+ *
+ * 而 CI 跑在 ubuntu-latest 上 —— 所以这个错**在 CI 里永远看不到**，
+ * 只有 Windows 成员本地跑才会撞上。与 `app/_test_mount.mjs:191` 保持同一写法。
+ */
+const load = (p) => import(pathToFileURL(p).href);
 
 let failed = 0;
 let passed = 0;
@@ -41,11 +55,11 @@ function check(name, fn) {
  * 加载两侧：主站（ESM 源码）与悬浮窗（生成产物）
  * ------------------------------------------------------------------ */
 
-const appSide = await import(join(FRONTEND, 'app', 'components', 'markdown.js'));
-const shared = await import(join(FRONTEND, 'shared', 'markdown.js'));
-const sse = await import(join(FRONTEND, 'shared', 'sse.js'));
-const text = await import(join(FRONTEND, 'shared', 'text.js'));
-const events = await import(join(FRONTEND, 'shared', 'events.js'));
+const appSide = await load(join(FRONTEND, 'app', 'components', 'markdown.js'));
+const shared = await load(join(FRONTEND, 'shared', 'markdown.js'));
+const sse = await load(join(FRONTEND, 'shared', 'sse.js'));
+const text = await load(join(FRONTEND, 'shared', 'text.js'));
+const events = await load(join(FRONTEND, 'shared', 'events.js'));
 
 /** 在沙箱里执行生成的经典脚本产物，拿到 __PSA.shared */
 function loadWidgetBundle() {
