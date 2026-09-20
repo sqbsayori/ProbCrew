@@ -240,6 +240,68 @@ for (const f of features) {
 console.log(failed === 0 ? `\n全部页面通过（${features.length}/${features.length}）` : `\n${failed} 个页面失败`);
 
 /* ------------------------------------------------------------------ *
+ * 管理页：关键区块必须真的渲染出来
+ * ------------------------------------------------------------------ *
+ * "能挂载"只证明没抛错。管理页是**唯一能删学生数据**的页面，
+ * 它白屏或少了二次确认，代价比别的页高得多。所以这里钉住它的结构：
+ * 标题、三个 tab、四张统计卡、以及"加载失败不白屏"。
+ *
+ * 注意：夹具里 fetch 一律 reject（见文件头），所以本页会走到错误分支 ——
+ * 这恰好是"后端没起时页面什么样"的真实场景，也正好该被断言。
+ */
+console.log('\n=== 管理页：关键区块 ===');
+{
+  // 以管理员身份渲染（守卫只看角色，不看令牌真假；这里给个假的管理员）
+  localStorage.setItem('probstat.token', 'test-token');
+  localStorage.setItem(
+    'probstat.user',
+    JSON.stringify({ user_id: 'usr_test', username: 't_admin', display_name: '管理员', role: 'admin', status: 'active' })
+  );
+
+  const host = new StubNode('div');
+  body.append(host);
+  const admin = await import(pathToFileURL(join(HERE, 'features', 'admin', 'index.js')).href);
+  admin.mount(host, mountCtx);
+
+  // ★ 必须等一拍：mount() 同步渲染骨架，数据是异步拉的。
+  //   不等的话读到的是"加载中"那一帧，会误报"缺内容"（第一次跑就踩到了）。
+  for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+  const text = host.allText();
+
+  const must = {
+    '页面标题': '学生数据管理',
+    'tab 学生': '学生',
+    'tab 账号': '账号',
+    'tab 审计': '审计',
+    '统计卡·学生数': '学生数',
+    '统计卡·总作答': '总作答',
+    '统计卡·平均正确率': '平均正确率',
+    '批量导入入口': '批量导入',
+    '导出入口': '导出 CSV',
+    // 注：「账号」tab 里的 CLI 说明不在默认视图里 —— 那是切 tab 才渲染的，这里不断言
+  };
+  let miss = 0;
+  for (const [what, needle] of Object.entries(must)) {
+    if (!text.includes(needle)) {
+      miss++;
+      console.log(`  ✘ 缺少${what}（找不到 "${needle}"）`);
+    }
+  }
+  if (text.trim().length < 100) {
+    miss++;
+    console.log(`  ✘ 管理页内容过少（${text.trim().length} 字）—— 后端不可用时应渲染错误提示而不是白屏`);
+  }
+  if (!/加载失败|无法|⚠️/.test(text)) {
+    miss++;
+    console.log('  ✘ 后端不可用时没有给出人话提示（应为"加载失败"类文案）');
+  }
+  if (miss === 0) console.log(`  ✔ 结构完整（${text.trim().length} 字，${Object.keys(must).length} 项关键区块）`);
+  failed += miss;
+  admin.unmount?.();
+  host.remove();
+}
+
+/* ------------------------------------------------------------------ *
  * 回归：换页必须回到顶部
  * ------------------------------------------------------------------ *
  * 症状（用户实际报过）：点侧栏「页面助手」，页面直接落在中下部的试玩 iframe 上，
@@ -271,8 +333,33 @@ const check2 = (name, fn) => {
 };
 
 const router = await import('./core/router.js');
+const authMod = await import('./core/auth.js');
 const assistantMod = await import('./features/assistant/index.js');
 const emptyMod = { mount: () => {}, unmount: () => {} };
+
+/**
+ * 从这一节起模拟"**已登录的学生**"。
+ *
+ * 为什么必须补这一手：加了账号体系之后，路由守卫会拦住所有业务页面 ——
+ * 未登录时 `navigate()` 根本不进 render，于是"换页回顶部"这类回归会假失败
+ * （不是代码坏了，是场景不对）。真实的用户永远是在登录态下换页的。
+ */
+function fakeLogin(role = 'student') {
+  localStorage.setItem('probstat.token', 'test-token');
+  localStorage.setItem(
+    'probstat.user',
+    JSON.stringify({
+      user_id: 'usr_test', username: 'tester', display_name: '测试同学',
+      role, status: 'active',
+    })
+  );
+}
+function fakeLogout() {
+  localStorage.removeItem('probstat.token');
+  localStorage.removeItem('probstat.user');
+}
+
+fakeLogin('student');
 
 check2('navigate() 会把滚动位置归零', () => {
   scrollCalls.length = 0;
@@ -283,6 +370,47 @@ check2('navigate() 会把滚动位置归零', () => {
     return arg && typeof arg === 'object' && arg.top === 0;
   });
   if (!ok) throw new Error(`没有以 top:0 调用 scrollTo，实际调用：${JSON.stringify(scrollCalls)}`);
+});
+
+check2('未登录时业务路由被守卫拦住（不白屏）', () => {
+  fakeLogout();
+  let mounted = false;
+  router.register(
+    { id: 'zz-guarded', title: '守卫页', route: 'zz-guarded', order: 998 },
+    { mount: () => { mounted = true; }, unmount: () => {} }
+  );
+  router.navigate('zz-guarded');
+  if (mounted) throw new Error('未登录却挂载了业务页面 —— 守卫没生效');
+  const text = [...shell.get('view-host').children].map((c) => c.allText?.() || '').join('');
+  if (!/需要登录/.test(text)) {
+    throw new Error(`守卫没有渲染提示（应出现"需要登录"），实际：${JSON.stringify(text.slice(0, 80))}`);
+  }
+  fakeLogin('student'); // 复原，后面的用例在登录态下跑
+});
+
+check2('学生进管理员路由被拦下（不挂载管理页）', () => {
+  fakeLogin('student');
+  let adminMounted = false;
+  // 注意：注册表的键是 feature 的 `id`，而导航用的是 `route` ——
+  // 真实 feature.json 里两者同名（id == route），夹具也必须照这个约定写。
+  router.register(
+    { id: 'admin', title: '管理页', route: 'admin', order: 997 },
+    { mount: () => { adminMounted = true; }, unmount: () => {} }
+  );
+  router.navigate('admin');
+  if (adminMounted) throw new Error('学生角色竟然挂载了管理员页面 —— 角色过滤没生效');
+  fakeLogin('student');
+});
+
+check2('角色规则本身：谁能进哪个路由', () => {
+  const a = authMod;
+  if (a.canEnter('admin', 'student')) throw new Error('学生不应能进 admin');
+  if (!a.canEnter('admin', 'admin')) throw new Error('管理员应能进 admin');
+  if (!a.canEnter('workbench', 'student')) throw new Error('学生应能进普通业务页');
+  if (a.canEnter('workbench', '')) throw new Error('未登录不应能进业务页');
+  if (!a.canEnter('login', '')) throw new Error('登录页应允许匿名访问');
+  if (a.defaultRoute('admin') !== 'admin') throw new Error('管理员落地页应为 admin');
+  if (a.defaultRoute('student') === 'admin') throw new Error('学生落地页不应是 admin');
 });
 
 check2('assistant 试玩/探针 iframe 关闭了滚动锚定', () => {

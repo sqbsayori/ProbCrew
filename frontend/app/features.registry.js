@@ -5,6 +5,7 @@
  * 然后重新运行生成脚本即可。这样多人并行开发不会在同一份清单上冲突。
  */
 export const FEATURES = [
+  {"id": "admin", "dir": "admin", "title": "学生数据管理", "icon": "🛠️", "route": "admin", "group": "管理", "order": 5, "subtitle": "班级统计 · 学生明细 · 账号与审计"},
   {"id": "workbench", "dir": "workbench", "title": "工作台", "icon": "🏠", "route": "workbench", "group": "概览", "order": 10, "subtitle": "系统总览 · Agent 角色 · 协作拓扑"},
   {"id": "knowledge", "dir": "knowledge", "title": "知识讲解", "icon": "📚", "route": "knowledge", "group": "学习", "order": 20, "subtitle": "检索教材 · 生成讲解 · 推荐交互动画"},
   {"id": "solver", "dir": "solver", "title": "题目讲解", "icon": "✏️", "route": "solver", "group": "学习", "order": 25, "subtitle": "逐步解题 · 独立校验 · 人机协同确认"},

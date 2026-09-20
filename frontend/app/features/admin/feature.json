@@ -1,0 +1,10 @@
+{
+  "id": "admin",
+  "dir": "admin",
+  "title": "学生数据管理",
+  "icon": "🛠️",
+  "route": "admin",
+  "group": "管理",
+  "order": 5,
+  "subtitle": "班级统计 · 学生明细 · 账号与审计"
+}

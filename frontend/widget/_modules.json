@@ -1,0 +1,22 @@
+{
+  "_generated_by": "scripts/build_widget.py",
+  "_note": "模块加载清单。loader.js 与油猴脚本的 @require 都以它为准（CI 会校验一致性）。",
+  "shared": "/widget/_shared.js",
+  "ui": [
+    "/widget/_shared.js",
+    "/widget/api.js",
+    "/widget/pet.js",
+    "/widget/render.js",
+    "/widget/anim-bridge.js",
+    "/widget/extractor.js",
+    "/widget/frames.js",
+    "/widget/assistant.js"
+  ],
+  "frame": [
+    "/widget/_shared.js",
+    "/widget/render.js",
+    "/widget/anim-bridge.js",
+    "/widget/extractor.js",
+    "/widget/frames.js"
+  ]
+}

@@ -35,10 +35,16 @@ ROOT = Path(__file__).resolve().parents[2]
 # --------------------------------------------------------------------------
 
 
-def test_config_defaults_match_previous_local_behavior() -> None:
-    """本地默认值必须与改造前**逐字一致**，否则"本地行为零变化"就是空话。"""
+def test_config_defaults_match_previous_local_behavior(monkeypatch) -> None:
+    """本地默认值必须与改造前**逐字一致**，否则"本地行为零变化"就是空话。
+
+    ⚠️ 必须清掉 DB_PATH：测试夹具（conftest.py）会把它指到临时库做隔离，
+    留着环境变量就验证不了"默认值"，那是夹具的干扰而不是代码的问题。
+    """
     from app.config import Settings
 
+    monkeypatch.delenv("DB_PATH", raising=False)
+    monkeypatch.delenv("DB_URL", raising=False)
     s = Settings(_env_file=None)
     assert s.app_host == "127.0.0.1"
     assert s.app_port == 8000
@@ -227,7 +233,13 @@ def test_learning_log_uses_configured_db_path(tmp_path: Path) -> None:
         settings.db_path = str(target)
         assert learning_log._db_path() == target
         asyncio.run(
-            learning_log.log_qa(ctx=None, session_id="deploy-test", query="测试配置生效", intent="knowledge")
+            learning_log.log_qa(
+                ctx=None,
+                user_id="usr_deploy_probe",  # 账号体系后必填；这里只验证"写到了配置的库"
+                session_id="deploy-test",
+                query="测试配置生效",
+                intent="knowledge",
+            )
         )
         assert target.exists(), "配置的库路径没有被真正使用"
     finally:

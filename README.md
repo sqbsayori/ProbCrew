@@ -160,10 +160,14 @@ ProbCrew/
 │       ├── domain/               8 种分布的 SymPy 符号推导
 │       ├── providers/            deepseek / mock
 │       ├── knowledge_base/probstat.md
-│       └── tests/                100 项单测（含契约、检索、批改、验证报告）
+│       └── tests/                173 项单测（含契约、账号权限、检索、批改、验证报告）
 └── frontend/
+    ├── shared/                   ★ 跨形态共享内核（主站与悬浮窗共用同一份实现）
+    │                             sse / markdown / math / api / events —— 口径见 docs/23
     ├── course/                   ★ 演示课程页（模拟真实课程平台）
-    ├── widget/                   ★ 可注入的助手组件
+    ├── widget/                   ★ 可注入的助手组件（经典脚本，走 @require）
+    │   ├── _shared.js                    ★ 生成产物：shared/ 的经典脚本包（勿手工编辑）
+    │   ├── _modules.json                 ★ 生成产物：模块加载清单
     │   ├── probstat-assistant.user.js   油猴脚本（第三方平台）
     │   ├── loader.js                    一行嵌入（自建站 / raw-live）
     │   ├── assistant.js                 主组件：面板/对话/HITL/皮肤/动画模式
@@ -196,19 +200,48 @@ ProbCrew/
 
 ---
 
+## 怎么登录（账号体系）
+
+**首次启动**会自动创建一个种子管理员，**密码打印在启动日志里**（形如 `pc-1a2b3c-4321`）：
+
+```
+  ★ 已创建种子管理员：admin  密码：pc-1a2b3c-4321
+     （请立刻登录并修改；改完这行日志就失去意义）
+```
+
+- 打开站点 → 未登录会被守卫送到**登录页**；
+- 学生看到「刷题 / 知识库 / 我的掌握情况」；管理员额外看到「学生数据管理」；
+- **建学生账号**有三种方式：管理页「批量导入 CSV」、管理页「＋」单个建、命令行：
+
+```powershell
+python scripts/manage_users.py create --username s01 --display-name 张三
+python scripts/manage_users.py list
+python scripts/manage_users.py reset-password --username s01
+python scripts/manage_users.py delete-data --username s01 --yes   # 不可逆
+```
+
+> ⚠️ **悬浮窗要单独登录一次**：它注入在第三方页面上，localStorage 与主站不共享。
+> ⚠️ 老库（匿名 session 时代）需要跑一次迁移，见 `python scripts/migrate_to_accounts.py`。
+
+---
+
 ## 自检
 
 ```powershell
 cd ProbCrew
 $env:PYTHONIOENCODING="utf-8"     # 中文 Windows 必需（脚本已自处理，设了更保险）
 
-python scripts/check_contracts.py      # 契约 + 注册表 + 部署无关化，46 项
+python scripts/check_contracts.py      # 契约 + 注册表 + 部署无关化，50 项
+python scripts/migrate_to_accounts.py --check   # 账号数据迁移状态
 python scripts/smoke_test.py           # 端到端自检，25 项
-python -m pytest backend/tests -q      # 单测，100 收集（CI 跑的就是这条）
+python -m pytest backend/tests -q      # 单测，173 收集（CI 跑的就是这条）
 python scripts/gen_registry.py --check # 前端注册表一致性
 node frontend/app/_test_mount.mjs      # 页面挂载（改前端必跑）
 node frontend/widget/_test_render.mjs  # 渲染器
 node frontend/widget/_test_deploy.mjs  # 部署无关化
+node frontend/shared/_test_shared.mjs  # 共享内核 + 主站/悬浮窗等价性
+python scripts/build_widget.py --check # 悬浮窗共享产物是否新鲜（改 shared/ 必跑）
+python scripts/gen_events_js.py --check # 事件常量是否与契约一致
 python scripts/live_test.py            # 真模型联调（需服务已启动）
 ```
 

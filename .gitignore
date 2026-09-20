@@ -14,8 +14,14 @@ venv/
 .ruff_cache/
 
 # ===== 运行期数据（学习记录，不入库）=====
+# L2 数据：绝对不能进仓库（docs/13 §1.1 约束 1）。
+# ★ 2026-09 补：原来的 *.sqlite 匹配不到迁移备份（learning.sqlite.bak-<时间戳>）与
+#   WAL/SHM 附属文件 —— 而备份里装的是**同样的学生数据**，漏掉等于漏一处。
 backend/data/*.sqlite
-backend/data/*.sqlite-journal
+backend/data/*.sqlite-*
+backend/data/*.sqlite.*
+backend/data/*.db
+backend/data/*.db-*
 backend/data/*.db
 
 # ===== 检索模型权重（BGE-M3 等，数 GB，**绝不进仓库**）=====

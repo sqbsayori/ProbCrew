@@ -61,6 +61,10 @@
 //   代价：改了 widget 代码后，需要到 Tampermonkey 里"检查更新"或重装脚本。
 //   注意：安装时后端必须可达，否则 @require 抓不到模块、安装会失败。
 //
+// @require      /widget/_shared.js
+//   ↑ 共享内核（由 scripts/build_widget.py 生成，勿手工编辑）：SSE 协议 / Markdown /
+//     公式渲染 / 事件常量。**必须排第一**，后面的模块都从 __PSA.shared 取实现。
+//     清单以 frontend/widget/_modules.json 为准（CI 会校验两者一致）。
 // @require      /widget/api.js
 // @require      /widget/pet.js
 // @require      /widget/render.js

@@ -44,7 +44,7 @@
     }, config.timeout);
     return fetch(url(path), {
       method: options.method || 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers: Object.assign({ 'Content-Type': 'application/json' }, PSA.api.authHeaders()),
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: options.signal || ctrl.signal,
     })
@@ -70,44 +70,21 @@
    * 读取 SSE 流。
    * 协议：每条事件是 `data: <json>`，以空行分隔（见 contracts/events.schema.json）。
    */
+  /**
+   * 消费 SSE 流。
+   *
+   * ★ 协议解析统一走**共享内核**（`shared/sse.js`，经生成产物 `_shared.js` 挂到 `__PSA.shared`）。
+   *   这里以前有一份自己的 promise-pump 实现，与主站那份已经长得不一样 ——
+   *   同一份协议写两遍、还漂移了，正是本轮"统一技术栈"要消灭的头号问题（docs/23 §1）。
+   */
   function consumeSSE(res, onEvent, signal) {
-    var reader = res.body.getReader();
-    var decoder = new TextDecoder('utf-8');
-    var buffer = '';
-
-    function pump() {
-      return reader.read().then(function (r) {
-        if (r.done) return undefined;
-        buffer += decoder.decode(r.value, { stream: true });
-        var idx;
-        while ((idx = buffer.indexOf('\n\n')) >= 0) {
-          var frame = buffer.slice(0, idx);
-          buffer = buffer.slice(idx + 2);
-          var lines = frame.split('\n');
-          for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];
-            if (line.indexOf('data:') !== 0) continue;
-            var raw = line.slice(5).trim();
-            if (!raw || raw === '{}') continue;
-            try {
-              onEvent(JSON.parse(raw));
-            } catch (e) {
-              console.warn('[PSA] 事件解析失败', raw, e);
-            }
-          }
-        }
-        if (signal && signal.aborted) return undefined;
-        return pump();
-      });
+    var shared = PSA.shared;
+    if (!shared || !shared.consumeSSE) {
+      return Promise.reject(
+        new Error('[PSA] 共享内核未加载：/widget/_shared.js 必须在 api.js 之前加载')
+      );
     }
-
-    return pump().finally(function () {
-      try {
-        reader.cancel();
-      } catch (e) {
-        /* 忽略 */
-      }
-    });
+    return shared.consumeSSE(res, onEvent, { signal: signal });
   }
 
   function openSSE(path, body, onEvent, signal) {
@@ -133,6 +110,17 @@
 
   PSA.api = {
     configure: configure,
+
+    /** 认证头注入点（账号体系）。令牌存哪由调用方决定，这里只负责带上去。 */
+    authHeaders: function () {
+      try {
+        var tk = global.localStorage && global.localStorage.getItem('psa.token');
+        return tk ? { Authorization: 'Bearer ' + tk } : {};
+      } catch (e) {
+        return {};
+      }
+    },
+
     getConfig: function () {
       return { base: config.base, timeout: config.timeout };
     },

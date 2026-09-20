@@ -14,6 +14,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
+from ..kernel import auth as A
+
 from ..config import PROJECT_ROOT
 
 router = APIRouter(tags=["problems"])
@@ -33,6 +35,7 @@ def load_examples() -> dict[str, Any]:
 
 @router.get("/api/problems/examples", summary="典型例题库")
 async def list_examples(
+    user: A.CurrentUser,
     chapter: str | None = Query(default=None, description="按章节过滤，如 ch01"),
     level: str | None = Query(default=None, description="基础 / 进阶"),
     tag: str | None = Query(default=None, description="按知识点标签过滤"),
@@ -69,7 +72,7 @@ async def list_examples(
 
 
 @router.get("/api/problems/examples/{example_id}", summary="单道例题详情")
-async def get_example(example_id: str) -> dict[str, Any]:
+async def get_example(example_id: str, user: A.CurrentUser) -> dict[str, Any]:
     for e in load_examples().get("examples", []):
         if e.get("id") == example_id:
             return e

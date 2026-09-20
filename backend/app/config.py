@@ -75,6 +75,22 @@ class Settings(BaseSettings):
     llm_temperature: float = 0.3
     llm_timeout_s: int = 60
 
+    # ---- 账号与登录（L2：账号数据只落本地库，见 docs/13）----
+    # 令牌是**服务端会话令牌**（存 student_token 表，库里只有 sha256），不是 JWT ——
+    # 因为要满足"重置密码 / 禁用账号后立刻失效"，无状态令牌做不到这件事。
+    auth_token_ttl_days: int = 7
+    # bcrypt 计算强度（2^n 轮）。12 是安全与耗时的平衡点；
+    # **测试里会调成 4**：否则每个用例 0.5s 的哈希开销会把整套测试拖到几分钟
+    # （哈希强度写在哈希串里，所以校验时不受这个值影响）。
+    auth_bcrypt_rounds: int = 12
+    # 标准档：连续错 5 次锁 60 秒
+    auth_max_failed: int = 5
+    auth_lock_seconds: int = 60
+    # 种子管理员：库里一个管理员都没有时用它建一个。
+    # 密码留空 → 自动生成随机密码并打印在启动日志里（推荐，避免弱口令落进 .env）。
+    admin_init_username: str = "admin"
+    admin_init_password: str = ""
+
     # ---- 协作机制开关（对应架构重构建议的 P0 机制）----
     hitl_enabled: bool = True  # 人机协同闸门
     verify_enabled: bool = True  # 生成/验证分权

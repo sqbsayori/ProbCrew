@@ -59,10 +59,12 @@ def _capture_report_for(query: str) -> dict:
     """真跑一次问答，取回发出去的 `verification.report` 的 data。"""
     from fastapi.testclient import TestClient
 
+    from _auth import login_client
     from app.main import app
 
     reports: list[dict] = []
     with TestClient(app) as client:
+        login_client(client)  # 对话接口需要登录（账号体系）
         with client.stream(
             "POST",
             "/api/chat/stream",

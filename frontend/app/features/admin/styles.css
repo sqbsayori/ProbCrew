@@ -1,0 +1,14 @@
+/* 学生数据管理页的局部样式。
+   骨架（页头 / 统计卡 / 表格 / 分页 / 空状态）全部来自共享的 styles/pages.css，
+   这里只放本页特有的东西 —— 一旦有第二个页面要用，就该搬去 pages.css。 */
+
+/* 操作列按钮排布（4 个按钮并排，窄屏自动换行） */
+.data-table td.col-actions { white-space: normal; }
+.data-table td.col-actions .btn { margin: 2px 0 2px 4px; }
+
+/* 详情面板里的键值行 */
+.admin-kv { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 13px; }
+.admin-kv b { font-weight: 600; }
+
+/* 导入结果里的等宽清单 */
+.admin-import pre { max-height: 220px; overflow: auto; background: #f8fafc; padding: 8px 10px; border-radius: 8px; }

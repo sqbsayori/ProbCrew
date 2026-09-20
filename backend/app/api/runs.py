@@ -18,6 +18,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
+from ..kernel import auth as A
 from ..kernel.runs import RUNS
 
 router = APIRouter(tags=["runs"])
@@ -75,9 +76,19 @@ def _summarize(run: Any) -> dict[str, Any]:
     }
 
 
-@router.get("/api/runs", summary="最近的运行列表")
-async def list_runs(limit: int = Query(default=30, ge=1, le=100)) -> dict[str, Any]:
-    runs = RUNS.recent(limit)
+@router.get("/api/runs", summary="最近的运行列表（只列自己的）")
+async def list_runs(user: A.CurrentUser, limit: int = Query(default=30, ge=1, le=100)) -> dict[str, Any]:
+    """★ 归属过滤：学生**只看到自己的运行**；管理员看全部。
+
+    这里曾经是实测到的泄漏点：无鉴权时这个接口会明文返回**所有人**的运行，
+    包括 `query`（提问原文）。提问原文是 L2 数据（`docs/13 §1.1`）。
+    """
+    is_admin = user.get("role") == "admin"
+    runs = [
+        r
+        for r in RUNS.recent(limit * 3 if not is_admin else limit)
+        if is_admin or (r.runtime or {}).get("user_id") == user.get("user_id")
+    ][:limit]
     items = [_summarize(r) for r in runs]
 
     # 汇总统计，便于页面顶部展示
@@ -85,16 +96,24 @@ async def list_runs(limit: int = Query(default=30, ge=1, le=100)) -> dict[str, A
     return {
         "count": len(items),
         "total_events": total_events,
+        "scope": "all" if is_admin else "mine",
         "items": items,
         "note": "运行记录保存在内存中，服务重启即清空（当前仅显示本次启动之后的运行）。",
     }
 
 
 @router.get("/api/runs/{run_id}/timeline", summary="单次运行的结构化轨迹")
-async def run_timeline(run_id: str) -> dict[str, Any]:
-    """把扁平的事件流整理成"阶段 + 条目"，便于前端画时间轴。"""
+async def run_timeline(run_id: str, user: A.CurrentUser) -> dict[str, Any]:
+    """把扁平的事件流整理成"阶段 + 条目"，便于前端画时间轴。
+
+    ★ 归属校验（与 `_owned_run` 同口径）：不是自己的运行一律 404 ——
+    这条路径以前会回传**完整答案增量**（实测单次 36 KB / 191 个事件）。
+    """
     run = RUNS.get(run_id)
     if run is None:
+        raise HTTPException(status_code=404, detail="运行不存在或已过期（服务可能已重启）")
+    owner = (run.runtime or {}).get("user_id")
+    if owner and owner != user.get("user_id") and user.get("role") != "admin":
         raise HTTPException(status_code=404, detail="运行不存在或已过期（服务可能已重启）")
 
     phases: list[dict[str, Any]] = []
