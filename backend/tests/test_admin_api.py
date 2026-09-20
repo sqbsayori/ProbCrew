@@ -61,7 +61,16 @@ def _actions(c, **params) -> list[str]:
 
 def test_overview_counts_only_real_students() -> None:
     """★ `usr_history`（迁移过来的匿名老数据）默认**不算进班级统计** ——
-    否则 76 条历史记录会把真实学生的数字淹没。"""
+    否则 76 条历史记录会把真实学生的数字淹没。
+
+    ⚠️ **必须先 `ensure_history_user()`**（与本文件其它用例一视同仁）：
+    `conftest.py` 把 `DB_PATH` 指到一个**空的临时库**，所以
+    `usr_history` 在干净环境里**并不存在**（CI / 新 clone 都是如此）。
+    少了这一行，`assert "history" in names2` 会永远失败 ——
+    它此前只在"作者本机跑过迁移"的机器上偶然通过。
+    对照组：`test_auth.py::test_history_account_cannot_login` 就是这么写的。
+    """
+    accounts.ensure_history_user()
     c = _admin_client()
     default = c.get("/api/admin/overview").json()
     with_history = c.get("/api/admin/overview?include_history=true").json()
